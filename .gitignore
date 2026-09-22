@@ -1,0 +1,16 @@
+# Xcelium
+xcelium.d/
+work.lib/
+.simvision/
+
+# Simulation output
+*.log
+*.vcd
+*.shm
+*.key
+*.diag
+*.history
+
+# Backup / temporary
+*~
+*.swp
