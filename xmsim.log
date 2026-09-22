@@ -1,0 +1,88 @@
+xmsim(64): 22.03-s012: (c) Copyright 1995-2023 Cadence Design Systems, Inc.
+TOOL:	xmsim(64)	22.03-s012: Started on Sep 21, 2026 at 19:26:30 KST
+xmsim
+    -MESS
+    tb_uart_v3_final
+    -gui
+
+xmsim: *W,NOMTDGUI: Multi-Threaded Dumping is disabled for interactive debug mode.
+
+-------------------------------------
+Relinquished control to SimVision...
+xcelium> 
+xcelium> run
+
+========================================
+ UART V3 FINAL REGRESSION
+========================================
+
+----------------------------------------
+ TEST 0 : RESET
+----------------------------------------
+PASS: CONTROL RESET
+PASS: BAUD RESET = 325
+PASS: FIFO RESET
+
+----------------------------------------
+ TEST 1 : 8N1 LOOPBACK + RX IRQ
+----------------------------------------
+PASS: RX IRQ = 1
+PASS: RX DATA = 55
+PASS: RX DATA = aa
+PASS: RX IRQ CLEAR BY EMPTY
+
+----------------------------------------
+ TEST 2 : 7BIT / ODD / 2 STOP
+----------------------------------------
+PASS: RX DATA = 55
+PASS: 7O2 LOOPBACK
+
+----------------------------------------
+ TEST 3 : TX_EN / RX_EN
+----------------------------------------
+PASS: TX_EN BLOCK
+PASS: RX_EN BLOCK
+
+----------------------------------------
+ TEST 4 : RX METADATA
+----------------------------------------
+PASS: ERROR IRQ
+PASS: PARITY + FRAME STICKY
+PASS: RX DATA = a5
+PASS: RX DATA = 3c
+PASS: ERROR RW1C
+
+----------------------------------------
+ TEST 5 : RX OVERFLOW
+----------------------------------------
+PASS: RX FIFO DEPTH = 8
+PASS: NEW BYTE DROPPED
+PASS: OVERFLOW IRQ
+PASS: RX DATA = 40
+PASS: RX DATA = 41
+PASS: RX DATA = 42
+PASS: RX DATA = 43
+PASS: RX DATA = 44
+PASS: RX DATA = 45
+PASS: RX DATA = 46
+PASS: RX DATA = 47
+PASS: OVERFLOW STICKY
+PASS: OVERFLOW CLEAR
+
+----------------------------------------
+ TEST 6 : MID-TRAFFIC RESET
+----------------------------------------
+PASS: RESET TX LINE = IDLE
+PASS: RESET CONTROL
+PASS: RESET BAUD = 325
+PASS: RESET FIFO LEVEL = 0
+
+========================================
+ UART V3 FINAL REGRESSION: ALL PASS
+========================================
+
+Simulation complete via $finish(1) at time 471260910 PS + 0
+./2_tb/tb_uart_v3_final.v:1343         $finish;
+xcelium> ^C
+xcelium> exit
+TOOL:	xmsim(64)	22.03-s012: Exiting on Sep 21, 2026 at 19:27:54 KST  (total: 00:01:24)

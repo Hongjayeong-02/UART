@@ -1,0 +1,110 @@
+xmvlog(64): 22.03-s012: (c) Copyright 1995-2023 Cadence Design Systems, Inc.
+TOOL:	xmvlog(64)	22.03-s012: Started on Sep 21, 2026 at 19:26:29 KST
+xmvlog
+    -MESS
+    -linedebug
+    ./1_rtl/uart_apb.v
+    ./1_rtl/uart_baud_gen.v
+    ./1_rtl/uart_core.v
+    ./1_rtl/uart_fifo.v
+    ./1_rtl/uart_irq.v
+    ./1_rtl/uart_loopback.v
+    ./1_rtl/uart_rx.v
+    ./1_rtl/uart_rx_fifo.v
+    ./1_rtl/uart_tx.v
+    ./1_rtl/uart_tx_fifo.v
+    ./1_rtl/uart_v2_top.v
+    ./2_tb/tb_uart_apb.v
+    ./2_tb/tb_uart_apb_rxmeta.v
+    ./2_tb/tb_uart_core.v
+    ./2_tb/tb_uart_fifo.v
+    ./2_tb/tb_uart_irq.v
+    ./2_tb/tb_uart_loopback.v
+    ./2_tb/tb_uart_overflow.v
+    ./2_tb/tb_uart_regmap.v
+    ./2_tb/tb_uart_rx.v
+    ./2_tb/tb_uart_rx_fifo.v
+    ./2_tb/tb_uart_tx.v
+    ./2_tb/tb_uart_tx_fifo.v
+    ./2_tb/tb_uart_v3_final.v
+
+file: ./1_rtl/uart_apb.v
+	module work_lib.uart_apb
+		errors: 0, warnings: 0
+file: ./1_rtl/uart_baud_gen.v
+	module work_lib.uart_baud_gen
+		errors: 0, warnings: 0
+file: ./1_rtl/uart_core.v
+	module work_lib.uart_core
+		errors: 0, warnings: 0
+file: ./1_rtl/uart_fifo.v
+	module work_lib.uart_fifo
+		errors: 0, warnings: 0
+file: ./1_rtl/uart_irq.v
+	module work_lib.uart_irq
+		errors: 0, warnings: 0
+file: ./1_rtl/uart_loopback.v
+	module work_lib.uart_loopback
+		errors: 0, warnings: 0
+file: ./1_rtl/uart_rx.v
+	module work_lib.uart_rx
+		errors: 0, warnings: 0
+file: ./1_rtl/uart_rx_fifo.v
+	module work_lib.uart_rx_fifo
+		errors: 0, warnings: 0
+file: ./1_rtl/uart_tx.v
+	module work_lib.uart_tx
+		errors: 0, warnings: 0
+file: ./1_rtl/uart_tx_fifo.v
+	module work_lib.uart_tx_fifo
+		errors: 0, warnings: 0
+file: ./1_rtl/uart_v2_top.v
+	module work_lib.uart_v2_top
+		errors: 0, warnings: 0
+file: ./2_tb/tb_uart_apb.v
+	module work_lib.tb_uart_apb
+		errors: 0, warnings: 0
+file: ./2_tb/tb_uart_apb_rxmeta.v
+	module work_lib.tb_uart_apb_rxmeta
+		errors: 0, warnings: 0
+file: ./2_tb/tb_uart_core.v
+	module work_lib.tb_uart_core
+		errors: 0, warnings: 0
+file: ./2_tb/tb_uart_fifo.v
+	module work_lib.tb_uart_rx_fifo
+		errors: 0, warnings: 0
+file: ./2_tb/tb_uart_irq.v
+	module work_lib.tb_uart_irq
+		errors: 0, warnings: 0
+file: ./2_tb/tb_uart_loopback.v
+	module work_lib.tb_uart_loopback
+		errors: 0, warnings: 0
+file: ./2_tb/tb_uart_overflow.v
+	module work_lib.tb_uart_overflow
+		errors: 0, warnings: 0
+file: ./2_tb/tb_uart_regmap.v
+	module work_lib.tb_uart_regmap
+		errors: 0, warnings: 0
+file: ./2_tb/tb_uart_rx.v
+	module work_lib.tb_uart_rx
+		errors: 0, warnings: 0
+file: ./2_tb/tb_uart_rx_fifo.v
+module tb_uart_rx_fifo;
+                     |
+xmvlog: *W,RECOMP (./2_tb/tb_uart_rx_fifo.v,3|21): recompiling design unit work_lib.tb_uart_rx_fifo.
+	First compiled from line 3 of ./2_tb/tb_uart_fifo.v.
+	module work_lib.tb_uart_rx_fifo
+		errors: 0, warnings: 1
+file: ./2_tb/tb_uart_tx.v
+	module work_lib.tb_uart_tx
+		errors: 0, warnings: 0
+file: ./2_tb/tb_uart_tx_fifo.v
+	module work_lib.tb_uart_tx_fifo
+		errors: 0, warnings: 0
+file: ./2_tb/tb_uart_v3_final.v
+        reset_dut();
+                  |
+xmvlog: *W,TMTPAR (./2_tb/tb_uart_v3_final.v,969|18): A task enable with no arguments must not include an empty set of parentheses [10.2.2 (IEEE Std 1364-2005)].  The compiler has ignored the parentheses.  Use 'xmhelp xmvlog TMTPAR'  for further information.
+	module work_lib.tb_uart_v3_final
+		errors: 0, warnings: 1
+TOOL:	xmvlog(64)	22.03-s012: Exiting on Sep 21, 2026 at 19:26:29 KST  (total: 00:00:00)
