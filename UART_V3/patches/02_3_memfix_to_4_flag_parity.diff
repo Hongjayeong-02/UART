@@ -1,0 +1,235 @@
+diff -ruN UART_V3_memfix/uart_fifo.v UART_V3/uart_fifo.v
+--- UART_V3_memfix/uart_fifo.v	2026-10-21 19:57:37.000000000 +0900
++++ UART_V3/uart_fifo.v	2026-10-22 18:36:54.000000000 +0900
+@@ -28,21 +28,28 @@
+ 
+ reg     [4:0]   r_count;
+ 
++// Registered status flags (timing opt):
++// full/empty are pre-computed one cycle ahead instead of decoding
++// r_count every cycle, so the count compare is removed from the
++// r_count -> w_wrEn/w_rdEn -> mem enable / pointer critical path.
++reg             r_full;
++reg             r_empty;
++
+ 
+ wire            w_wrEn;
+ wire            w_rdEn;
+ 
+ 
+-assign o_full  = (r_count == FIFO_DEPTH);
+-assign o_empty = (r_count == 0);
++assign o_full  = r_full;
++assign o_empty = r_empty;
+ assign o_count = r_count;
+ 
+ 
+ assign w_wrEn = i_wrEn &&
+-                !o_full;
++                !r_full;
+ 
+ assign w_rdEn = i_rdEn &&
+-                !o_empty;
++                !r_empty;
+ 
+ // FIFO storage: no reset (separated from async-reset control logic)
+ always @(posedge clk) begin
+@@ -57,6 +64,9 @@
+                 r_rdPtr   <= 0;
+                 r_count   <= 0;
+ 
++                r_full    <= 1'b0;
++                r_empty   <= 1'b1;
++
+                 o_rdData  <= 8'd0;
+ 
+         end else begin
+@@ -77,6 +87,9 @@
+ 
+                                 r_count <= r_count + 1'b1;
+ 
++                                r_full  <= (r_count == FIFO_DEPTH - 1);
++                                r_empty <= 1'b0;
++
+                         end
+ 
+ 
+@@ -92,6 +105,9 @@
+ 
+                                 r_count <= r_count - 1'b1;
+ 
++                                r_full  <= 1'b0;
++                                r_empty <= (r_count == 1);
++
+                         end
+ 
+ 
+@@ -131,4 +147,15 @@
+ end
+ 
+ 
++// Simulation-only invariant check: registered flags must match r_count
++// synopsys translate_off
++always @(posedge clk) begin
++        if (rst_n && ((r_full  !== (r_count == FIFO_DEPTH)) ||
++                      (r_empty !== (r_count == 0))))
++                $display("FAIL: FIFO FLAG mismatch [%m] count=%0d full=%b empty=%b @%0t",
++                         r_count, r_full, r_empty, $time);
++end
++// synopsys translate_on
++
++
+ endmodule
+diff -ruN UART_V3_memfix/uart_rx_fifo.v UART_V3/uart_rx_fifo.v
+--- UART_V3_memfix/uart_rx_fifo.v	2026-10-21 19:57:37.000000000 +0900
++++ UART_V3/uart_rx_fifo.v	2026-10-22 18:36:54.000000000 +0900
+@@ -47,6 +47,12 @@
+ 
+ reg     [4:0]   r_count;
+ 
++// Registered status flags (timing opt):
++// full/empty are pre-computed one cycle ahead instead of decoding
++// r_count every cycle (removes the compare from the count/pointer path).
++reg             r_full;
++reg             r_empty;
++
+ 
+ reg             r_paritySave;
+ reg             r_frameSave;
+@@ -61,8 +67,8 @@
+ wire            w_frameData;
+ 
+ 
+-assign o_fifoFull  = (r_count == FIFO_DEPTH);
+-assign o_fifoEmpty = (r_count == 0);
++assign o_fifoFull  = r_full;
++assign o_fifoEmpty = r_empty;
+ assign o_fifoCount = r_count;
+ 
+ 
+@@ -169,6 +175,9 @@
+                 r_rdPtr         <= 0;
+                 r_count         <= 0;
+ 
++                r_full          <= 1'b0;
++                r_empty         <= 1'b1;
++
+                 o_rdData        <= 8'd0;
+                 o_rdParityErr   <= 1'b0;
+                 o_rdFrameErr    <= 1'b0;
+@@ -193,6 +202,9 @@
+ 
+                                 r_count <= r_count + 1'b1;
+ 
++                                r_full  <= (r_count == FIFO_DEPTH - 1);
++                                r_empty <= 1'b0;
++
+                         end
+ 
+ 
+@@ -212,6 +224,9 @@
+ 
+                                 r_count <= r_count - 1'b1;
+ 
++                                r_full  <= 1'b0;
++                                r_empty <= (r_count == 1);
++
+                         end
+ 
+ 
+@@ -254,4 +269,15 @@
+ end
+ 
+ 
++// Simulation-only invariant check: registered flags must match r_count
++// synopsys translate_off
++always @(posedge clk) begin
++        if (rst_n && ((r_full  !== (r_count == FIFO_DEPTH)) ||
++                      (r_empty !== (r_count == 0))))
++                $display("FAIL: RX FIFO FLAG mismatch [%m] count=%0d full=%b empty=%b @%0t",
++                         r_count, r_full, r_empty, $time);
++end
++// synopsys translate_on
++
++
+ endmodule
+diff -ruN UART_V3_memfix/uart_tx.v UART_V3/uart_tx.v
+--- UART_V3_memfix/uart_tx.v	2026-10-21 19:57:37.000000000 +0900
++++ UART_V3/uart_tx.v	2026-10-22 18:36:54.000000000 +0900
+@@ -42,6 +42,11 @@
+ reg		r_stop2		;
+ reg		r_parityBit	;
+ 
++// Reserved parity mode (2'b11) keeps the original behavior: parity slot = 0
++wire		w_parityOut	= r_parityBit &
++				  ((r_parityMode == PARITY_EVEN) ||
++				   (r_parityMode == PARITY_ODD));
++
+ always @(posedge clk or negedge rst_n) begin
+ 	if (!rst_n) begin
+ 		r_state		<= IDLE;
+@@ -78,26 +83,11 @@
+ 					r_parityMode	<= i_parityMode;
+ 					r_stop2		<= i_stop2;
+ 
+-					case (i_parityMode)
+-						PARITY_EVEN: begin
+-							if (i_data7)
+-								r_parityBit <= ^i_txData[6:0];
+-							else
+-								r_parityBit <= ^i_txData[7:0];
+-						end
+-
+-						PARITY_ODD: begin
+-							if (i_data7)
+-								r_parityBit <= ~^i_txData[6:0];
+-							else
+-								r_parityBit <= ~^i_txData[7:0];
+-						end
+-
+-						default: begin
+-								r_parityBit <= 1'b0;
+-						end
+-
+-					endcase
++					// Parity is accumulated bit-serially while data bits are sent
++					// (timing opt: removes the 8-input XOR tree from the
++					//  i_txData -> r_parityBit capture path).
++					// Seed: ODD = 1, EVEN/NONE = 0.
++					r_parityBit <= (i_parityMode == PARITY_ODD);
+ 
+ 					o_txReady <= 1'b0;
+ 					o_txBusy  <= 1'b1;
+@@ -132,6 +122,7 @@
+ 						r_bitCnt  <= 3'd0;
+ 
+ 						o_uartTx  <= r_txData[0];
++						r_parityBit <= r_parityBit ^ r_txData[0];
+ 						r_state   <= DATA;
+ 					end else begin
+ 						r_tickCnt <= r_tickCnt + 1'b1;
+@@ -155,13 +146,14 @@
+ 							r_state   <= STOP;
+ 						
+ 							end else begin
+-								o_uartTx  <= r_parityBit;
++								o_uartTx  <= w_parityOut;
+ 								r_state   <= PARITY;	
+ 							end 
+ 						
+ 						end else begin
+ 							r_bitCnt <= r_bitCnt + 1'b1;
+ 							o_uartTx <= r_txData[r_bitCnt + 1'b1];
++							r_parityBit <= r_parityBit ^ r_txData[r_bitCnt + 1'b1];
+ 						end
+ 
+ 					end else begin
+@@ -172,7 +164,7 @@
+ 
+ 
+ 			PARITY: begin
+-				o_uartTx <= r_parityBit;
++				o_uartTx <= w_parityOut;
+ 
+ 				if (i_tick16) begin
+ 					if (r_tickCnt == 4'd15) begin

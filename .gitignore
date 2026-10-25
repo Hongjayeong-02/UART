@@ -1,0 +1,35 @@
+# Xcelium
+xcelium.d/
+work.lib/
+.simvision/
+
+# Simulation output
+*.log
+*.vcd
+*.shm
+*.key
+*.diag
+*.history
+
+# Backup / temporary
+*~
+*.swp
+build/
+
+# EDA outputs / PDK (never publish)
+*.sdf
+*.spef
+*.gds
+*.gds2
+*.oas
+*.lef
+*.lib
+!cds.lib
+*.db
+*.enc
+*.enc.dat/
+*.dat/
+*_netlist.v
+*_pnr.v
+*.vvp
+*.pdf

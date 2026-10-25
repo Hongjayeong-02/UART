@@ -1,0 +1,75 @@
+diff -ruN UART_V3_orig/uart_fifo.v UART_V3_memfix/uart_fifo.v
+--- UART_V3_orig/uart_fifo.v	2026-10-21 19:20:55.000000000 +0900
++++ UART_V3_memfix/uart_fifo.v	2026-10-21 19:57:37.000000000 +0900
+@@ -44,6 +44,11 @@
+ assign w_rdEn = i_rdEn &&
+                 !o_empty;
+ 
++// FIFO storage: no reset (separated from async-reset control logic)
++always @(posedge clk) begin
++        if (w_wrEn)
++                r_mem[r_wrPtr] <= i_wrData;
++end
+ 
+ always @(posedge clk or negedge rst_n) begin
+         if (!rst_n) begin
+@@ -64,7 +69,6 @@
+                         // Write
+                         2'b10: begin
+ 
+-                                r_mem[r_wrPtr] <= i_wrData;
+ 
+                                 if (r_wrPtr == FIFO_DEPTH - 1)
+                                         r_wrPtr <= 0;
+@@ -94,7 +98,6 @@
+                         // Read + Write
+                         2'b11: begin
+ 
+-                                r_mem[r_wrPtr] <= i_wrData;
+ 
+                                 o_rdData <= r_mem[r_rdPtr];
+ 
+diff -ruN UART_V3_orig/uart_rx_fifo.v UART_V3_memfix/uart_rx_fifo.v
+--- UART_V3_orig/uart_rx_fifo.v	2026-10-21 19:20:55.000000000 +0900
++++ UART_V3_memfix/uart_rx_fifo.v	2026-10-21 19:57:37.000000000 +0900
+@@ -151,6 +151,16 @@
+ end
+ 
+ 
++// RX FIFO storage: no reset (separated from async-reset control logic)
++always @(posedge clk) begin
++        if (w_fifoWrEn)
++                r_mem[r_wrPtr] <= {
++                        w_frameData,
++                        w_parityData,
++                        w_rxData
++                };
++end
++
+ // RX FIFO
+ always @(posedge clk or negedge rst_n) begin
+         if (!rst_n) begin
+@@ -173,11 +183,6 @@
+                         // Write
+                         2'b10: begin
+ 
+-                                r_mem[r_wrPtr] <= {
+-                                        w_frameData,
+-                                        w_parityData,
+-                                        w_rxData
+-                                };
+ 
+ 
+                                 if (r_wrPtr == FIFO_DEPTH - 1)
+@@ -213,11 +218,6 @@
+                         // Read + Write
+                         2'b11: begin
+ 
+-                                r_mem[r_wrPtr] <= {
+-                                        w_frameData,
+-                                        w_parityData,
+-                                        w_rxData
+-                                };
+ 
+ 
+                                 o_rdFrameErr  <= r_mem[r_rdPtr][9];

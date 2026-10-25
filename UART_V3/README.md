@@ -1,0 +1,59 @@
+# UART V3 — APB3 UART Peripheral IP
+
+APB3 slave UART IP. 8개 memory-mapped register, TX/RX FIFO(depth 8, parameterized), 7/8-bit data,
+even/odd parity, 1/2 stop bit, RX data / parity·frame error / overflow interrupt(W1C), internal loopback.
+
+
+## 폴더
+
+| 폴더 | 내용 |
+|---|---|
+| `1_rtl/` | **최종 RTL (⑨ = ⑦ + reset synchronizer)**. top: `uart_apb`(peripheral), `uart_chip_top`(PAD 포함) |
+| `patches/` | 원본 → ③ → ④ → ⑦ → ⑨ 단계별 `diff -ruN`, ⑤ 기각안, ⑧ 미채택안 |
+| `2_tb/` | `tb_uart_v3_final.v`(regression 34 checks), `tb_uart_v3_final_gl.v`(같은 34 checks, 내부 신호 참조 없음 → gate-level용), `mcp_checker.sv`(MCP 근거 assertion), GLS·PAD TB |
+| `3_syn/` | 1 GHz SDC(`cons/`), Genus 스크립트(`script/`), 핵심 리포트(④ `opt4`, ⑦ `pipe7`, ⑧ `rxp8`, ⑨ `rsync9`, 계층 유지 `hier`) |
+| `4_pnr/` | Innovus 스크립트 0~5, MMMC, P&R SDC, sweep 스크립트, MCP what-if(`scripts/mcp_whatif.tcl`), 리포트(⑦ `reports_pipe7/`, ⑧ `reports_rxp8/`, ⑨ `reports_rsync9/`) |
+| `5_gls/` | post-layout GLS용 SDF 설정 (smoke: max / min / recrem split, gate-level regression: `gl_max` / `gl_min`) |
+| `6_verify/` | regression 결과(`regression/*_pf.txt`), 동등성 비교 TB(`equivalence/`), 면적 합산 `area.awk` |
+
+## 바로 돌려 보기 (Icarus Verilog)
+
+```sh
+cd UART_V3
+make regress   # 최종 RTL에 34-check regression → 서버(Xcelium) 결과와 diff
+make gl        # gate-level용 TB를 RTL에 실행 → regress와 diff
+make mcp       # MCP 근거 assertion
+make eq        # ③ vs ④ FIFO·TX 랜덤 비교, 원본 vs ④ FIFO reset 동등성
+```
+
+## 서버 flow (Cadence)
+
+스크립트는 학교 서버의 디렉터리 구조를 기준으로 작성되어 있다. 이 저장소와의 대응:
+
+| 서버 (`~/PROJ1/proj1_make/TOP/`) | 저장소 |
+|---|---|
+| `RTL/UART_V3_rsync/` | `1_rtl/` |
+| `SIM/TESTBENCH/UART_V3/` | `2_tb/` |
+| `SYN/cons`, `SYN/script` | `3_syn/cons`, `3_syn/script` |
+| `PNR_1GHZ_RSYNC/` (⑨), `PNR_1GHZ_PIPE/` (⑦) | `4_pnr/scripts/` |
+| `SIM/POST_1GHZ/`, `SIM/GL_RSYNC/` | `5_gls/` |
+
+```tcsh
+# regression (Xcelium)
+xrun -64bit -clean -access +r -timescale 1ns/1ps ../TESTBENCH/UART_V3/tb_uart_v3_final.v -y ../../RTL/UART_V3_rsync +libext+.v -l rsync.log
+# synthesis
+genus -files script/run_synthesis_1ghz_rsync.tcl -log syn_rsync
+# P&R
+innovus -nowin -log run_all.log < run_all.tcl >& console.log
+# post-layout GLS (SS SDF)
+xrun -64bit -clean -access +rwc -neg_tchk -sdf_verbose -sdf_cmd_file sdf_max.cmd -top tb_uart_v3_gls \
+     ../TESTBENCH/UART_V3/tb_uart_v3_post_gls.v ../../PNR_1GHZ/outputs/uart_apb_pnr.v <GPDK045 cell verilog> -l gls_max.log
+# gate-level regression (⑨, SS SDF) — min은 gl_min.cmd
+xrun -64bit -clean -access +r -neg_tchk -sdf_verbose -sdf_cmd_file gl_max.cmd -define NO_DUMP -top tb_uart_v3_final_gl \
+     ../TESTBENCH/UART_V3/tb_uart_v3_final_gl.v ../../PNR_1GHZ_RSYNC/outputs/uart_apb_pnr.v <GPDK045 cell verilog> -l gl_max.log
+```
+
+MCP what-if는 ChipFinish DB를 연 뒤 `set_interactive_constraint_modes [all_constraint_modes -active]` → `source mcp_whatif.tcl` 순서로 실행한다
+(interactive mode를 지정하지 않으면 SDC 명령이 반영되지 않는다).
+
+GPDK045 라이브러리(.lib/.lef/capTbl), netlist, SDF, GDS, Innovus DB는 라이선스·용량 때문에 포함하지 않는다.

@@ -1,0 +1,1 @@
+MCP_ASSERT SUMMARY: fail=0 | ticks=2507 rxTcChg=2190 txTcChg=2096 | TX START/DATA reads=1856 TX PARITY cycles=144 RX PARITY reads=48

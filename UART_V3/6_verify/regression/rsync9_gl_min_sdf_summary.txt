@@ -1,0 +1,6 @@
+== gl_min.log : SDF annotation / timing check summary
+	Annotation completed with 0 Errors and 181 Warnings
+      4 xmelab: *W,SDFNDP: Annotation resulted in a negative delay value or pulse limit to specify
+    171 xmelab: *W,SDFNET: Unable to annotate to non-existent timing check (RECREM (posedge RN) (p
+     10 xmelab: *W,SDFNET: Unable to annotate to non-existent timing check (RECREM (posedge SN) (p
+Timing violation lines: 0

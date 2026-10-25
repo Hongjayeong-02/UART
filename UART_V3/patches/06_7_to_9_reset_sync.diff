@@ -1,0 +1,84 @@
+diff -ruN UART_V3_pipe/uart_apb.v UART_V3_rsync/uart_apb.v
+--- UART_V3_pipe/uart_apb.v	2026-10-25 15:28:45.555249096 +0900
++++ UART_V3_rsync/uart_apb.v	2026-10-25 15:28:45.557578595 +0900
+@@ -33,6 +33,29 @@
+ 
+ 
+ // ---------------------------------------------------------
++// Reset synchronizer (asynchronous assert, synchronous deassert)
++//
++// The external rst_n only drives these two flops. All other flops
++// use w_rst_n, which is released on a clk edge, so their
++// recovery/removal checks are against an internally launched,
++// clock-aligned signal instead of an assumed input delay.
++// rst_n assertion still resets the whole IP immediately.
++// Deassertion is delayed by 2 clk cycles.
++// ---------------------------------------------------------
++reg     [1:0]   r_rstSync;
++wire            w_rst_n;
++
++always @(posedge clk or negedge rst_n) begin
++        if (!rst_n)
++                r_rstSync <= 2'b00;
++        else
++                r_rstSync <= {r_rstSync[0], 1'b1};
++end
++
++assign w_rst_n = r_rstSync[1];
++
++
++// ---------------------------------------------------------
+ // Register Address
+ // ---------------------------------------------------------
+ localparam ADDR_TXDATA      = 8'h00;
+@@ -163,8 +186,8 @@
+                     i_pwrite &&
+                     (i_paddr == ADDR_TXDATA);
+ 
+-always @(posedge clk or negedge rst_n) begin
+-        if (!rst_n)
++always @(posedge clk or negedge w_rst_n) begin
++        if (!w_rst_n)
+                 r_txPush <= 1'b0;
+         else
+                 r_txPush <= w_txWrEn;
+@@ -205,7 +228,7 @@
+         .RX_FIFO_DEPTH      (RX_FIFO_DEPTH)
+ ) uut_uart_core (
+         .clk                (clk),
+-        .rst_n              (rst_n),
++        .rst_n              (w_rst_n),
+ 
+         .i_enable           (r_uartEn),
+         .i_txEn             (r_txEn),
+@@ -258,7 +281,7 @@
+ // ---------------------------------------------------------
+ uart_irq uut_uart_irq (
+         .clk            (clk),
+-        .rst_n          (rst_n),
++        .rst_n          (w_rst_n),
+ 
+         .i_irqEn        (r_irqEn),
+         .i_irqClear     (w_irqClear),
+@@ -280,8 +303,8 @@
+ // ---------------------------------------------------------
+ // Register Write
+ // ---------------------------------------------------------
+-always @(posedge clk or negedge rst_n) begin
+-        if (!rst_n) begin
++always @(posedge clk or negedge w_rst_n) begin
++        if (!w_rst_n) begin
+ 
+                 r_uartEn       <= 1'b0;
+                 r_txEn         <= 1'b0;
+@@ -352,8 +375,8 @@
+ // ---------------------------------------------------------
+ // RX FIFO Synchronous Read
+ // ---------------------------------------------------------
+-always @(posedge clk or negedge rst_n) begin
+-        if (!rst_n) begin
++always @(posedge clk or negedge w_rst_n) begin
++        if (!w_rst_n) begin
+ 
+                 r_rxReadPending <= 1'b0;
+ 

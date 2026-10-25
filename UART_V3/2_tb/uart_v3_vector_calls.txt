@@ -1,0 +1,499 @@
+256:                apb_write(
+257-                        ADDR_TXDATA,
+258-                        {24'd0, data}
+259-                );
+260-
+261-
+262-                wait (
+263-                        uut.w_rxFifoCount ==
+264-                        expectedCount
+265-                );
+266-
+--
+292:                apb_read(
+293-                        ADDR_RXDATA,
+294-                        r_readData
+295-                );
+296-
+297-
+298-                if (
+299-                        r_readData[7:0] !==
+300-                        expectedData
+301-                ) begin
+302-
+--
+514:        // TEST 0 : RESET
+515-        // =================================================
+516-        $display("");
+517-        $display("----------------------------------------");
+518:        $display(" TEST 0 : RESET");
+519-        $display("----------------------------------------");
+520-
+521-
+522:        apb_read(
+523-                ADDR_CTRL,
+524-                r_readData
+525-        );
+526-
+527-
+528-        if (r_readData[7:0] !== 8'h00) begin
+529-
+530-                $display(
+531-                        "FAIL: CONTROL RESET"
+532-                );
+--
+545:        apb_read(
+546-                ADDR_BAUDDIV,
+547-                r_readData
+548-        );
+549-
+550-
+551-        if (r_readData[15:0] !== 16'd325) begin
+552-
+553-                $display(
+554-                        "FAIL: BAUD RESET"
+555-                );
+--
+568:        apb_read(
+569-                ADDR_FIFO_LEVEL,
+570-                r_readData
+571-        );
+572-
+573-
+574-        if (r_readData[15:0] !== 16'd0) begin
+575-
+576-                $display(
+577-                        "FAIL: FIFO RESET"
+578-                );
+--
+592:        apb_write(
+593-                ADDR_BAUDDIV,
+594-                BAUD_DIV
+595-        );
+596-
+597-
+598-        // =================================================
+599:        // TEST 1 : 8N1 LOOPBACK + RX IRQ
+600-        // =================================================
+601-        $display("");
+602-        $display("----------------------------------------");
+603:        $display(" TEST 1 : 8N1 LOOPBACK + RX IRQ");
+604-        $display("----------------------------------------");
+605-
+606-
+607:        apb_write(
+608-                ADDR_CTRL,
+609-                CTRL_LOOPBACK_8N1
+610-        );
+611-
+612-
+613:        apb_write(
+614-                ADDR_IRQ_EN,
+615-                32'h0000_0001
+616-        );
+617-
+618-
+619:        loopback_send(
+620-                8'h55,
+621-                5'd1
+622-        );
+623-
+624-
+625:        loopback_send(
+626-                8'hAA,
+627-                5'd2
+628-        );
+629-
+630-
+631-        if (w_irq !== 1'b1) begin
+632-
+633-                $display(
+634-                        "FAIL: RX IRQ"
+635-                );
+--
+648:        rx_check(
+649-                8'h55,
+650-                1'b0,
+651-                1'b0
+652-        );
+653-
+654-
+655:        rx_check(
+656-                8'hAA,
+657-                1'b0,
+658-                1'b0
+659-        );
+660-
+661-
+662-        repeat (3)
+663-                @(posedge clk);
+664-
+665-
+--
+684:        // TEST 2 : 7BIT / ODD / 2 STOP
+685-        // =================================================
+686-        $display("");
+687-        $display("----------------------------------------");
+688:        $display(" TEST 2 : 7BIT / ODD / 2 STOP");
+689-        $display("----------------------------------------");
+690-
+691-
+692:        apb_write(
+693-                ADDR_IRQ_EN,
+694-                32'd0
+695-        );
+696-
+697-
+698:        apb_write(
+699-                ADDR_CTRL,
+700-                CTRL_LOOPBACK_7O2
+701-        );
+702-
+703-
+704:        loopback_send(
+705-                8'h55,
+706-                5'd1
+707-        );
+708-
+709-
+710:        rx_check(
+711-                8'h55,
+712-                1'b0,
+713-                1'b0
+714-        );
+715-
+716-
+717-        $display(
+718-                "PASS: 7O2 LOOPBACK"
+719-        );
+720-
+--
+723:        // TEST 3 : TX_EN / RX_EN
+724-        // =================================================
+725-        $display("");
+726-        $display("----------------------------------------");
+727:        $display(" TEST 3 : TX_EN / RX_EN");
+728-        $display("----------------------------------------");
+729-
+730-
+731-        // TX Disable
+732:        apb_write(
+733-                ADDR_CTRL,
+734-                CTRL_RX_LOOPBACK
+735-        );
+736-
+737-
+738:        apb_write(
+739-                ADDR_TXDATA,
+740-                32'h0000_0033
+741-        );
+742-
+743-
+744-        repeat (50)
+745-                @(posedge clk);
+746-
+747-
+748:        apb_read(
+749-                ADDR_FIFO_LEVEL,
+750-                r_readData
+751-        );
+752-
+753-
+754-        if (r_readData[7:0] !== 8'd0) begin
+755-
+756-                $display(
+757-                        "FAIL: TX_EN BLOCK"
+758-                );
+--
+772:        apb_write(
+773-                ADDR_CTRL,
+774-                CTRL_TX_LOOPBACK
+775-        );
+776-
+777-
+778:        apb_write(
+779-                ADDR_TXDATA,
+780-                32'h0000_0033
+781-        );
+782-
+783-
+784-        wait (
+785-                uut.w_txBusy
+786-        );
+787-
+788-
+--
+798:        apb_read(
+799-                ADDR_FIFO_LEVEL,
+800-                r_readData
+801-        );
+802-
+803-
+804-        if (r_readData[15:8] !== 8'd0) begin
+805-
+806-                $display(
+807-                        "FAIL: RX_EN BLOCK"
+808-                );
+--
+822:        // TEST 4 : RX METADATA
+823-        // =================================================
+824-        $display("");
+825-        $display("----------------------------------------");
+826:        $display(" TEST 4 : RX METADATA");
+827-        $display("----------------------------------------");
+828-
+829-
+830:        apb_write(
+831-                ADDR_CTRL,
+832-                CTRL_RX_8E1
+833-        );
+834-
+835-
+836:        apb_write(
+837-                ADDR_IRQ_EN,
+838-                32'h0000_000C
+839-        );
+840-
+841-
+842-        // Parity Error
+843:        send_external_frame(
+844-                8'hA5,
+845-                1'b1,
+846-                1'b0
+847-        );
+848-
+849-
+850-        wait (
+851-                uut.w_rxFifoCount ==
+852-                5'd1
+853-        );
+--
+857:        send_external_frame(
+858-                8'h3C,
+859-                1'b0,
+860-                1'b1
+861-        );
+862-
+863-
+864-        wait (
+865-                uut.w_rxFifoCount ==
+866-                5'd2
+867-        );
+--
+890:        apb_read(
+891-                ADDR_STATUS,
+892-                r_readData
+893-        );
+894-
+895-
+896-        if (r_readData[7:6] !== 2'b11) begin
+897-
+898-                $display(
+899-                        "FAIL: ERROR STICKY STATUS = %02b",
+900-                        r_readData[7:6]
+--
+914:        rx_check(
+915-                8'hA5,
+916-                1'b1,
+917-                1'b0
+918-        );
+919-
+920-
+921:        rx_check(
+922-                8'h3C,
+923-                1'b0,
+924-                1'b1
+925-        );
+926-
+927-
+928-        // Error Sticky Clear
+929:        apb_write(
+930-                ADDR_IRQ_STATUS,
+931-                32'h0000_000C
+932-        );
+933-
+934-
+935-        repeat (3)
+936-                @(posedge clk);
+937-
+938-
+939:        apb_read(
+940-                ADDR_IRQ_STATUS,
+941-                r_readData
+942-        );
+943-
+944-
+945-        if (r_readData[3:2] !== 2'b00) begin
+946-
+947-                $display(
+948-                        "FAIL: ERROR RW1C"
+949-                );
+--
+975:        apb_write(
+976-                ADDR_BAUDDIV,
+977-                BAUD_DIV
+978-        );
+979-
+980-
+981-        // =================================================
+982:        // TEST 5 : RX OVERFLOW
+983-        // =================================================
+984-        $display("");
+985-        $display("----------------------------------------");
+986:        $display(" TEST 5 : RX OVERFLOW");
+987-        $display("----------------------------------------");
+988-
+989-
+990:        apb_write(
+991-                ADDR_CTRL,
+992-                CTRL_LOOPBACK_8N1
+993-        );
+994-
+995-
+996:        apb_write(
+997-                ADDR_IRQ_EN,
+998-                32'h0000_0010
+999-        );
+1000-
+1001-
+1002-        // RX FIFO Depth = 8 (spec sec.8.3 / sec.16 default; uart_core's
+1003-        // RX_FIFO_DEPTH parameter default)
+1004-        for (
+1005-                r_index = 0;
+1006-                r_index < 8;
+--
+1010:                loopback_send(
+1011-                        8'h40 + r_index,
+1012-                        r_index + 1
+1013-                );
+1014-
+1015-        end
+1016-
+1017-
+1018:        apb_read(
+1019-                ADDR_FIFO_LEVEL,
+1020-                r_readData
+1021-        );
+1022-
+1023-
+1024-        if (r_readData[15:8] !== 8'd8) begin
+1025-
+1026-                $display(
+1027-                        "FAIL: RX FIFO DEPTH = %0d",
+1028-                        r_readData[15:8]
+--
+1053:        apb_write(
+1054-                ADDR_TXDATA,
+1055-                32'h0000_00AA
+1056-        );
+1057-
+1058-
+1059-        wait (
+1060-                uut.w_txBusy
+1061-        );
+1062-
+1063-
+--
+1079:        apb_read(
+1080-                ADDR_FIFO_LEVEL,
+1081-                r_readData
+1082-        );
+1083-
+1084-
+1085-        if (r_readData[15:8] !== 8'd8) begin
+1086-
+1087-                $display(
+1088-                        "FAIL: OVERFLOW COUNT"
+1089-                );
+--
+1126:                rx_check(
+1127-                        8'h40 + r_index,
+1128-                        1'b0,
+1129-                        1'b0
+1130-                );
+1131-
+1132-        end
+1133-
+1134-
+1135-        if (w_irq !== 1'b1) begin
+1136-
+--
+1152:        apb_write(
+1153-                ADDR_IRQ_STATUS,
+1154-                32'h0000_0010
+1155-        );
+1156-
+1157-
+1158-        repeat (3)
+1159-                @(posedge clk);
+1160-
+1161-
+1162-        if (w_irq !== 1'b0) begin
+--
+1180:        // TEST 6 : MID-TRAFFIC RESET
+1181-        // =================================================
+1182-        $display("");
+1183-        $display("----------------------------------------");
+1184:        $display(" TEST 6 : MID-TRAFFIC RESET");
+1185-        $display("----------------------------------------");
+1186-
+1187-
+1188:        apb_write(
+1189-                ADDR_IRQ_EN,
+1190-                32'd0
+1191-        );
+1192-
+1193-
+1194:        apb_write(
+1195-                ADDR_CTRL,
+1196-                CTRL_LOOPBACK_8N1
+1197-        );
+1198-
+1199-
+1200:        apb_write(
+1201-                ADDR_TXDATA,
+1202-                32'h0000_005A
+1203-        );
+1204-
+1205-
+1206-        wait (
+1207-                uut.w_txBusy
+1208-        );
+1209-
+1210-
+--
+1247:        apb_read(
+1248-                ADDR_CTRL,
+1249-                r_readData
+1250-        );
+1251-
+1252-
+1253-        if (r_readData[7:0] !== 8'h00) begin
+1254-
+1255-                $display(
+1256-                        "FAIL: RESET CONTROL"
+1257-                );
+--
+1270:        apb_read(
+1271-                ADDR_BAUDDIV,
+1272-                r_readData
+1273-        );
+1274-
+1275-
+1276-        if (r_readData[15:0] !== 16'd325) begin
+1277-
+1278-                $display(
+1279-                        "FAIL: RESET BAUD"
+1280-                );
+--
+1293:        apb_read(
+1294-                ADDR_FIFO_LEVEL,
+1295-                r_readData
+1296-        );
+1297-
+1298-
+1299-        if (r_readData[15:0] !== 16'd0) begin
+1300-
+1301-                $display(
+1302-                        "FAIL: RESET FIFO LEVEL"
+1303-                );

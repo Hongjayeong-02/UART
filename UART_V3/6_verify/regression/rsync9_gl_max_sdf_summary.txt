@@ -1,0 +1,5 @@
+== gl_max.log : SDF annotation / timing check summary
+	Annotation completed with 0 Errors and 181 Warnings
+    171 xmelab: *W,SDFNET: Unable to annotate to non-existent timing check (REMOVAL (posedge RN) (
+     10 xmelab: *W,SDFNET: Unable to annotate to non-existent timing check (REMOVAL (posedge SN) (
+Timing violation lines: 0

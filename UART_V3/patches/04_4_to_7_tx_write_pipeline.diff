@@ -1,0 +1,68 @@
+diff -ruN UART_V3/uart_apb.v UART_V3_pipe/uart_apb.v
+--- UART_V3/uart_apb.v	2026-10-25 02:28:56.000000000 +0900
++++ UART_V3_pipe/uart_apb.v	2026-10-25 02:28:56.000000000 +0900
+@@ -136,6 +136,48 @@
+                   !w_txFifoFull;
+ 
+ 
++// ---------------------------------------------------------
++// TX_DATA write pipeline (timing opt, 1 GHz)
++//
++// Original: APB access -> address decode -> r_txEn gating -> FIFO
++//           !full -> wrPtr decode -> mem enable -> data MUX, all in
++//           one cycle (worst R2R path, 9 logic levels).
++// Now     : the accepted TX_DATA write is registered (r_txPush /
++//           r_txPushData) and pushed into the FIFO on the NEXT cycle.
++//
++// Software-visible behavior is unchanged: an APB transfer needs at
++// least 2 cycles (SETUP + ACCESS), so the push (cycle N+1) and the
++// FIFO count/full update (visible from N+2) complete before the next
++// ACCESS phase can sample STATUS / FIFO_LEVEL / TX_DATA again.
++// CTRL (r_txEn/r_uartEn) also cannot change before the push for the
++// same reason. TX line start is delayed by 1 clk (internal only).
++// ---------------------------------------------------------
++reg             r_txPush;
++reg     [7:0]   r_txPushData;
++
++wire            w_txDataWr;
++
++// address-only decode for the data capture (r_txEn kept out of the
++// 8-bit data enable path)
++assign w_txDataWr = w_apbAccess &&
++                    i_pwrite &&
++                    (i_paddr == ADDR_TXDATA);
++
++always @(posedge clk or negedge rst_n) begin
++        if (!rst_n)
++                r_txPush <= 1'b0;
++        else
++                r_txPush <= w_txWrEn;
++end
++
++// data register: no reset (only consumed when r_txPush == 1, which
++// always follows a capture)
++always @(posedge clk) begin
++        if (w_txDataWr)
++                r_txPushData <= i_pwdata[7:0];
++end
++
++
+ // RX_DATA Read
+ assign w_rxRdEn = w_apbAccess &&
+                   !i_pwrite &&
+@@ -176,8 +218,8 @@
+         .i_stop2            (r_stop2),
+         .i_loopbackEn       (r_loopbackEn),
+ 
+-        .i_txWrEn           (w_txWrEn),
+-        .i_txData           (i_pwdata[7:0]),
++        .i_txWrEn           (r_txPush),
++        .i_txData           (r_txPushData),
+ 
+         .i_rxRdEn           (w_rxRdEn),
+ 
+@@ -566,4 +608,3 @@
+ 
+ 
+ endmodule
+-

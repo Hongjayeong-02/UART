@@ -1,0 +1,219 @@
+diff -ruN UART_V3/uart_apb.v UART_V3_opt2/uart_apb.v
+--- UART_V3/uart_apb.v	2026-10-25 02:28:56.000000000 +0900
++++ UART_V3_opt2/uart_apb.v	2026-10-22 18:36:52.000000000 +0900
+@@ -58,6 +58,10 @@
+ reg             r_data7;
+ reg             r_loopbackEn;
+ 
++// r_uartEn & r_txEn pre-combined at CTRL write (timing opt):
++// removes one AND level from r_txEn -> TX FIFO write-enable path.
++reg             r_txPathEn;
++
+ 
+ // ---------------------------------------------------------
+ // BAUD_DIV
+@@ -131,8 +135,7 @@
+ assign w_txWrEn = w_apbAccess &&
+                   i_pwrite &&
+                   (i_paddr == ADDR_TXDATA) &&
+-                  r_uartEn &&
+-                  r_txEn &&
++                  r_txPathEn &&
+                   !w_txFifoFull;
+ 
+ 
+@@ -251,6 +254,8 @@
+                 r_data7        <= 1'b0;
+                 r_loopbackEn   <= 1'b0;
+ 
++                r_txPathEn     <= 1'b0;
++
+                 // Target board: CORE-5300 (Zynq-7000 SoC lab kit), PL fabric
+                 // clock = 50MHz (board pin U18, PL_clk). Default baud = 9600.
+                 // BAUD_DIV = round(PCLK/(16*BAUD)) - 1
+@@ -281,6 +286,8 @@
+                         r_data7        <= i_pwdata[6];
+                         r_loopbackEn   <= i_pwdata[7];
+ 
++                        r_txPathEn     <= i_pwdata[0] & i_pwdata[1];
++
+                 end
+ 
+ 
+@@ -565,5 +572,14 @@
+ end
+ 
+ 
+-endmodule
++// Simulation-only invariant check: r_txPathEn == r_uartEn & r_txEn
++// synopsys translate_off
++always @(posedge clk) begin
++        if (rst_n && (r_txPathEn !== (r_uartEn & r_txEn)))
++                $display("FAIL: TXPATHEN mismatch [%m] uartEn=%b txEn=%b txPathEn=%b @%0t",
++                         r_uartEn, r_txEn, r_txPathEn, $time);
++end
++// synopsys translate_on
++
+ 
++endmodule
+diff -ruN UART_V3/uart_fifo.v UART_V3_opt2/uart_fifo.v
+--- UART_V3/uart_fifo.v	2026-10-22 18:36:54.000000000 +0900
++++ UART_V3_opt2/uart_fifo.v	2026-10-22 18:36:52.000000000 +0900
+@@ -35,6 +35,11 @@
+ reg             r_full;
+ reg             r_empty;
+ 
++// One-hot copy of r_wrPtr (timing opt):
++// mem[k] write enable = w_wrEn & r_wrSel[k], so the
++// r_wrPtr -> 3:8 decoder is removed from the write-enable path.
++reg     [FIFO_DEPTH-1:0] r_wrSel;
++
+ 
+ wire            w_wrEn;
+ wire            w_rdEn;
+@@ -52,15 +57,18 @@
+                 !r_empty;
+ 
+ // FIFO storage: no reset (separated from async-reset control logic)
++integer k;
+ always @(posedge clk) begin
+-        if (w_wrEn)
+-                r_mem[r_wrPtr] <= i_wrData;
++        for (k = 0; k < FIFO_DEPTH; k = k + 1)
++                if (w_wrEn && r_wrSel[k])
++                        r_mem[k] <= i_wrData;
+ end
+ 
+ always @(posedge clk or negedge rst_n) begin
+         if (!rst_n) begin
+ 
+                 r_wrPtr   <= 0;
++                r_wrSel   <= {{(FIFO_DEPTH-1){1'b0}}, 1'b1};
+                 r_rdPtr   <= 0;
+                 r_count   <= 0;
+ 
+@@ -85,6 +93,9 @@
+                                 else
+                                         r_wrPtr <= r_wrPtr + 1'b1;
+ 
++                                r_wrSel <= {r_wrSel[FIFO_DEPTH-2:0],
++                                            r_wrSel[FIFO_DEPTH-1]};
++
+                                 r_count <= r_count + 1'b1;
+ 
+                                 r_full  <= (r_count == FIFO_DEPTH - 1);
+@@ -123,6 +134,9 @@
+                                 else
+                                         r_wrPtr <= r_wrPtr + 1'b1;
+ 
++                                r_wrSel <= {r_wrSel[FIFO_DEPTH-2:0],
++                                            r_wrSel[FIFO_DEPTH-1]};
++
+ 
+                                 if (r_rdPtr == FIFO_DEPTH - 1)
+                                         r_rdPtr <= 0;
+@@ -147,13 +161,16 @@
+ end
+ 
+ 
+-// Simulation-only invariant check: registered flags must match r_count
++// Simulation-only invariant checks: flags vs r_count, one-hot vs r_wrPtr
+ // synopsys translate_off
+ always @(posedge clk) begin
+         if (rst_n && ((r_full  !== (r_count == FIFO_DEPTH)) ||
+                       (r_empty !== (r_count == 0))))
+                 $display("FAIL: FIFO FLAG mismatch [%m] count=%0d full=%b empty=%b @%0t",
+                          r_count, r_full, r_empty, $time);
++        if (rst_n && (r_wrSel !== ({{(FIFO_DEPTH-1){1'b0}}, 1'b1} << r_wrPtr)))
++                $display("FAIL: FIFO WRSEL mismatch [%m] wrPtr=%0d wrSel=%b @%0t",
++                         r_wrPtr, r_wrSel, $time);
+ end
+ // synopsys translate_on
+ 
+diff -ruN UART_V3/uart_rx.v UART_V3_opt2/uart_rx.v
+--- UART_V3/uart_rx.v	2026-10-22 18:36:54.000000000 +0900
++++ UART_V3_opt2/uart_rx.v	2026-10-22 18:36:52.000000000 +0900
+@@ -49,6 +49,11 @@
+ reg             r_frameErr;
+ reg             r_stopCnt;
+ 
++// Expected parity, accumulated bit-serially while data bits are
++// sampled (timing opt: removes the 8-input XOR tree from the
++// r_rxData -> r_parityErr path). Seed: ODD = 1, EVEN/NONE = 0.
++reg             r_parityAcc;
++
+ 
+ // ---------------------------------------------------------
+ // 2-FF Synchronizer
+@@ -84,6 +89,8 @@
+                 r_parityErr     <= 1'b0;
+                 r_frameErr      <= 1'b0;
+ 
++                r_parityAcc     <= 1'b0;
++
+                 o_rxData        <= 8'd0;
+                 o_rxValid       <= 1'b0;
+                 o_rxBusy        <= 1'b0;
+@@ -124,6 +131,8 @@
+                                         r_parityErr     <= 1'b0;
+                                         r_frameErr      <= 1'b0;
+ 
++                                        r_parityAcc     <= (i_parityMode == PARITY_ODD);
++
+                                         o_rxBusy        <= 1'b1;
+ 
+                                         r_state         <= START_CHECK;
+@@ -177,6 +186,7 @@
+ 
+                                                 // LSB first
+                                                 r_rxData[r_bitCnt] <= r_rxSync;
++                                                r_parityAcc        <= r_parityAcc ^ r_rxSync;
+ 
+                                                 // Last data bit
+                                                 if (
+@@ -214,35 +224,11 @@
+                                         if (r_tickCnt == 4'd15) begin
+                                                 r_tickCnt <= 4'd0;
+ 
+-                                                if (r_data7) begin
+-
+-                                                        if (r_parityMode == PARITY_EVEN) begin
+-
+-                                                                if (r_rxSync != (^r_rxData[6:0]))
+-                                                                        r_parityErr <= 1'b1;
+-
+-                                                        end else if (r_parityMode == PARITY_ODD) begin
+-
+-                                                                if (r_rxSync != (~^r_rxData[6:0]))
+-                                                                        r_parityErr <= 1'b1;
+-
+-                                                        end
+-
+-                                                end else begin
+-
+-                                                        if (r_parityMode == PARITY_EVEN) begin
+-
+-                                                                if (r_rxSync != (^r_rxData[7:0]))
+-                                                                        r_parityErr <= 1'b1;
+-
+-                                                        end else if (r_parityMode == PARITY_ODD) begin
+-
+-                                                                if (r_rxSync != (~^r_rxData[7:0]))
+-                                                                        r_parityErr <= 1'b1;
+-
+-                                                        end
+-
+-                                                end
++                                                // Reserved mode (2'b11): no parity check (original behavior)
++                                                if (((r_parityMode == PARITY_EVEN) ||
++                                                     (r_parityMode == PARITY_ODD)) &&
++                                                    (r_rxSync != r_parityAcc))
++                                                        r_parityErr <= 1'b1;
+ 
+                                                 r_stopCnt <= 1'b0;
+                                                 r_state   <= STOP;
+@@ -315,4 +301,3 @@
+ end
+ 
+ endmodule
+-

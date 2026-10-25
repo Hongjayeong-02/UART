@@ -1,0 +1,86 @@
+--- a/uart_rx.v
++++ b/uart_rx.v
+@@ -49,6 +49,11 @@
+ reg             r_frameErr;
+ reg             r_stopCnt;
+ 
++// Expected parity, accumulated bit-serially while data bits are
++// sampled (timing opt: removes the 8-input XOR tree from the
++// r_rxData -> r_parityErr path). Seed: ODD = 1, EVEN/NONE = 0.
++reg             r_parityAcc;
++
+ 
+ // ---------------------------------------------------------
+ // 2-FF Synchronizer
+@@ -84,6 +89,8 @@
+                 r_parityErr     <= 1'b0;
+                 r_frameErr      <= 1'b0;
+ 
++                r_parityAcc     <= 1'b0;
++
+                 o_rxData        <= 8'd0;
+                 o_rxValid       <= 1'b0;
+                 o_rxBusy        <= 1'b0;
+@@ -124,6 +131,8 @@
+                                         r_parityErr     <= 1'b0;
+                                         r_frameErr      <= 1'b0;
+ 
++                                        r_parityAcc     <= (i_parityMode == PARITY_ODD);
++
+                                         o_rxBusy        <= 1'b1;
+ 
+                                         r_state         <= START_CHECK;
+@@ -177,6 +186,7 @@
+ 
+                                                 // LSB first
+                                                 r_rxData[r_bitCnt] <= r_rxSync;
++                                                r_parityAcc        <= r_parityAcc ^ r_rxSync;
+ 
+                                                 // Last data bit
+                                                 if (
+@@ -214,35 +224,11 @@
+                                         if (r_tickCnt == 4'd15) begin
+                                                 r_tickCnt <= 4'd0;
+ 
+-                                                if (r_data7) begin
+-
+-                                                        if (r_parityMode == PARITY_EVEN) begin
+-
+-                                                                if (r_rxSync != (^r_rxData[6:0]))
+-                                                                        r_parityErr <= 1'b1;
+-
+-                                                        end else if (r_parityMode == PARITY_ODD) begin
+-
+-                                                                if (r_rxSync != (~^r_rxData[6:0]))
+-                                                                        r_parityErr <= 1'b1;
+-
+-                                                        end
+-
+-                                                end else begin
+-
+-                                                        if (r_parityMode == PARITY_EVEN) begin
+-
+-                                                                if (r_rxSync != (^r_rxData[7:0]))
+-                                                                        r_parityErr <= 1'b1;
+-
+-                                                        end else if (r_parityMode == PARITY_ODD) begin
+-
+-                                                                if (r_rxSync != (~^r_rxData[7:0]))
+-                                                                        r_parityErr <= 1'b1;
+-
+-                                                        end
+-
+-                                                end
++                                                // Reserved mode (2'b11): no parity check (original behavior)
++                                                if (((r_parityMode == PARITY_EVEN) ||
++                                                     (r_parityMode == PARITY_ODD)) &&
++                                                    (r_rxSync != r_parityAcc))
++                                                        r_parityErr <= 1'b1;
+ 
+                                                 r_stopCnt <= 1'b0;
+                                                 r_state   <= STOP;
+@@ -315,4 +301,3 @@
+ end
+ 
+ endmodule
+-
