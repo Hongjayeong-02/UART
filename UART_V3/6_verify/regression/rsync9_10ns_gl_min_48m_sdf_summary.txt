@@ -1,0 +1,6 @@
+== g10_min_48.log : SDF annotation / timing check summary
+	Annotation completed with 0 Errors and 180 Warnings
+    171 xmelab: *W,SDFNET: Unable to annotate to non-existent timing check (RECREM (posedge RN) (p
+      9 xmelab: *W,SDFNET: Unable to annotate to non-existent timing check (RECREM (posedge SN) (p
+Timing violation lines: 0
+Glitch suppression lines: 0

@@ -59,6 +59,7 @@
 | **post-route hold WNS** | **+0.002 ns** (위반 0) | +0.021 ns (위반 0) |
 | DRC · Conn | 0 · 0 | 0 · 28 (pad ring, 아래) |
 | 면적 (`report_area`) | **3,716.5 µm²** (1,046 inst, hold buffer 17개) | 1,185,575 µm² (대부분 pad, density 0.258 %) |
+| **gate-level regression** (최종 netlist + SDF) | **33/33** × SS/FF × TB clock **100 MHz(at-speed)** / 48 MHz, RTL과 diff 0, timing violation 0 | — |
 | **Conformal LEC** RTL ⑨ ↔ 합성 netlist | **PASS** · Equivalent 368 (PO 36 + DFF 332) · Non-eq 0 · Abort 0 | — |
 
 | | V1 | V2 | **V3 ⑨** |

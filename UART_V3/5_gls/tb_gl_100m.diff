@@ -1,0 +1,4 @@
+78c78
+< always #10.41667 clk = ~clk;
+---
+> always #5.0 clk = ~clk;   // 100 MHz (10 ns) at-speed
