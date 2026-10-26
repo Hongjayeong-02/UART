@@ -8,12 +8,10 @@ set GPDK /GPDK045/digital/gsclib045_all_v4.4
 
 ########## RC Corner ##########
 create_rc_corner -name BEST \
-   -cap_table "$GPDK/captable/cln28hpl_1p10m+alrdl_5x2yu2yz_typical.capTbl" \
    -T 0 \
    -qx_tech_file $GPDK/gsclib045/qrc/qx/gpdk045.tch
 
 create_rc_corner -name WORST \
-   -cap_table "$GPDK/captable/cln28hpl_1p10m+alrdl_5x2yu2yz_typical.capTbl" \
    -T 125 \
    -qx_tech_file $GPDK/gsclib045/qrc/qx/gpdk045.tch
 

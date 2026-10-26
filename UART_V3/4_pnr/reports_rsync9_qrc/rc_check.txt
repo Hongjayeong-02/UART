@@ -1,0 +1,2 @@
+== grep -c 'IMPEXT-6202\|capTbl' run_all.log (0 이어야 함)
+0

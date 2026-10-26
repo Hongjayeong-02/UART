@@ -12,8 +12,8 @@ even/odd parity, 1/2 stop bit, RX data / parity·frame error / overflow interrup
 | `patches/` | 원본 → ③ → ④ → ⑦ → ⑨ 단계별 `diff -ruN`, ⑤ 기각안, ⑧ 미채택안 |
 | `2_tb/` | `tb_uart_v3_final.v`(regression 34 checks), `tb_uart_v3_final_gl.v`(같은 34 checks, 내부 신호 참조 없음 → gate-level용), `mcp_checker.sv`(MCP 근거 assertion), GLS·PAD TB |
 | `3_syn/` | 1 GHz SDC(`cons/`), Genus 스크립트(`script/`), 핵심 리포트(④ `opt4`, ⑦ `pipe7`, ⑧ `rxp8`, ⑨ `rsync9`, 계층 유지 `hier`) |
-| `4_pnr/` | Innovus 스크립트 0~5, MMMC, P&R SDC, sweep 스크립트, MCP what-if(`scripts/mcp_whatif.tcl`), 리포트(⑦ `reports_pipe7/`, ⑧ `reports_rxp8/`, ⑨ `reports_rsync9/`) |
-| `5_gls/` | post-layout GLS용 SDF 설정 (smoke: max / min / recrem split, gate-level regression: `gl_max` / `gl_min`) |
+| `4_pnr/` | Innovus 스크립트 0~5, MMMC(cap table 제거본), P&R SDC, sweep 스크립트, MCP what-if(`scripts/mcp_whatif.tcl`), 리포트(**최종 ⑨ QRC `reports_rsync9_qrc/`**, ⑦ QRC `reports_pipe7_qrc/`, cap table flow: ⑦ `reports_pipe7/`, ⑧ `reports_rxp8/`, ⑨ `reports_rsync9/`) |
+| `5_gls/` | post-layout GLS용 SDF 설정 (smoke: max / min / recrem split, gate-level regression: `gl_max` / `gl_min`, ⑨ QRC: `glq_max` / `glq_min`) |
 | `6_verify/` | regression 결과(`regression/*_pf.txt`), 동등성 비교 TB(`equivalence/`), 면적 합산 `area.awk` |
 
 ## 바로 돌려 보기 (Icarus Verilog)
@@ -35,7 +35,7 @@ make eq        # ③ vs ④ FIFO·TX 랜덤 비교, 원본 vs ④ FIFO reset 동
 | `RTL/UART_V3_rsync/` | `1_rtl/` |
 | `SIM/TESTBENCH/UART_V3/` | `2_tb/` |
 | `SYN/cons`, `SYN/script` | `3_syn/cons`, `3_syn/script` |
-| `PNR_1GHZ_RSYNC/` (⑨), `PNR_1GHZ_PIPE/` (⑦) | `4_pnr/scripts/` |
+| `PNR_1GHZ_RSYNC_QRC/` (최종 ⑨), `PNR_1GHZ_PIPE_QRC/` (⑦), `PNR_1GHZ_RSYNC/`·`PNR_1GHZ_PIPE/` (cap table flow) | `4_pnr/scripts/` |
 | `SIM/POST_1GHZ/`, `SIM/GL_RSYNC/` | `5_gls/` |
 
 ```tcsh
@@ -55,5 +55,20 @@ xrun -64bit -clean -access +r -neg_tchk -sdf_verbose -sdf_cmd_file gl_max.cmd -d
 
 MCP what-if는 ChipFinish DB를 연 뒤 `set_interactive_constraint_modes [all_constraint_modes -active]` → `source mcp_whatif.tcl` 순서로 실행한다
 (interactive mode를 지정하지 않으면 SDC 명령이 반영되지 않는다).
+
+## RC 설정 (cap table flow → QRC flow)
+
+처음 MMMC의 RC corner에는 `gpdk045.tch`와 함께 28 nm용 cap table(`-cap_table ...capTbl`)이 지정돼 있었다(Innovus IMPEXT-6202 경고).
+배선 후 추출은 두 경우 모두 TQuantus + `gpdk045.tch`였지만, 배치·CTS 단계의 preRoute 추정은 cap table을 썼다.
+`sed -i '/-cap_table/d' uart_apb.mmmc.view`로 두 줄만 지우고 RTL·SDC·util은 그대로 재실행했다(`_QRC` 폴더). 저장소의 `uart_apb.mmmc.view`는 제거본이다.
+
+| R2R TNS (ns) | postCTS 예측 | postRoute 실제 | R2R WNS | area (µm²) |
+|---|---|---|---|---|
+| ⑦ cap table | −13.03 | −3.82 | −77 | 6,676 |
+| ⑨ cap table | −12.74 | −5.15 | −110 | 6,400 |
+| ⑦ QRC | −6.48 | −7.91 | −116 | 6,204 |
+| **⑨ QRC (최종)** | −6.40 | −6.97 | **−97** | **5,830** |
+
+cap table flow는 배선 전 예측이 비관적이라 셀이 과하게 upsizing됐다. run은 조건마다 1회씩이다.
 
 GPDK045 라이브러리(.lib/.lef/capTbl), netlist, SDF, GDS, Innovus DB는 라이선스·용량 때문에 포함하지 않는다.
