@@ -1,0 +1,38 @@
+########################################
+# UART V3 Block-level MMMC
+# Top : uart_apb / Clock : 1 GHz
+# Lib : GPDK045 basicCells (multibit, PAD 미사용)
+########################################
+
+set GPDK /GPDK045/digital/gsclib045_all_v4.4
+
+########## RC Corner ##########
+create_rc_corner -name BEST \
+   -T 0 \
+   -qx_tech_file $GPDK/gsclib045/qrc/qx/gpdk045.tch
+
+create_rc_corner -name WORST \
+   -T 125 \
+   -qx_tech_file $GPDK/gsclib045/qrc/qx/gpdk045.tch
+
+########## Library Set ##########
+create_library_set -name FF_Min_1p10v_0c \
+   -timing [list $GPDK/gsclib045/timing/fast_vdd1v0_basicCells.lib]
+
+create_library_set -name SS_Max_0p90v_125c \
+   -timing [list $GPDK/gsclib045/timing/slow_vdd1v0_basicCells.lib]
+
+########## Delay Corner ##########
+create_delay_corner -name FF_BEST  -library_set FF_Min_1p10v_0c   -rc_corner BEST
+create_delay_corner -name SS_WORST -library_set SS_Max_0p90v_125c -rc_corner WORST
+
+########## Constraint Mode ##########
+create_constraint_mode -name FUNC \
+   -sdc_files [list uart_apb_1ghz_pnr.sdc]
+
+########## Analysis View ##########
+create_analysis_view -name FUNC_FF_BEST  -constraint_mode FUNC -delay_corner FF_BEST
+create_analysis_view -name FUNC_SS_WORST -constraint_mode FUNC -delay_corner SS_WORST
+
+set_analysis_view -setup [list FUNC_SS_WORST] \
+                  -hold  [list FUNC_FF_BEST]

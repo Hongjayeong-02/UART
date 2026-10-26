@@ -4,9 +4,25 @@
 
 | 버전 | 내용 | 폴더 |
 |---|---|---|
-| V1 | UART core (baud gen, TX, RX), loopback TB | [`UART_V1/`](UART_V1) |
-| V2 | APB register, TX/RX FIFO, interrupt, 모듈별 TB | [`UART_V2/`](UART_V2) |
+| V1 | UART core (baud gen, TX, RX), loopback TB · 1 GHz 합성·P&R(V3와 같은 flow) | [`UART_V1/`](UART_V1) |
+| V2 | APB register, TX/RX FIFO, interrupt, 모듈별 TB · 1 GHz 합성·P&R(V3와 같은 flow) | [`UART_V2/`](UART_V2) |
 | **V3** | APB3 peripheral IP, 1 GHz 합성·RTL 최적화·P&R·post-layout GLS | [`UART_V3/`](UART_V3) |
+
+### V1 · V2 · V3 공통 방법론 비교 (post-route, 1 GHz 목표)
+
+같은 SDC 파일(`uart_v3_1ghz.sdc`, 포트를 `all_inputs`/`all_outputs` 집합으로 지정) · 같은 corner(SS setup / FF hold) · QRC MMMC · 같은 P&R 스크립트(util 0.6), 핀 배치만 각 포트에 맞춤. V1·V2는 check_timing을 따로 돌리지 않았다.
+
+| | V1 | V2 | **V3 ⑨ QRC** |
+|---|---|---|---|
+| R2R WNS | −36 ps | −202 ps | **−97 ps** |
+| 셀 / 면적 (`report_area`) | 477 / 1,383 µm² | 2,401 / 8,059 µm² | **1,735 / 5,854 µm²** |
+| reset 핀 removal 위반 | 70 | 176 | **0** (reset synchronizer) |
+| DRC · Conn | 0 · 0 | 0 · 0 | 0 · 0 |
+
+- **세 버전 모두 1 GHz setup은 미달성이다.** 전체 WNS(I/O 포함)는 V2 −1.061 ns, V3 −1.049 ns로 거의 같다 — 현재 SDC의 I/O 60 % 예산 때문이다.
+- V2 → V3 개선(면적 −27 %, R2R −202 → −97 ps)은 사양·구조 변경(FIFO 16 → 8, 레지스터 재구성)과 RTL timing 수정(③④⑦), reset synchronizer(⑨)를 **합친 효과**다. 항목별 기여는 분리하지 않았다.
+- V1은 V3보다 R2R이 좋지만, APB·FIFO·IRQ가 없는 더 단순한 설계다.
+- V1·V2의 hold 위반은 모두 `rst_n → FF/RN` removal이다. V3 ⑨의 2-FF reset synchronizer가 없앤 문제와 같다.
 
 ## UART V3 · 1 GHz Timing Closure Study
 
