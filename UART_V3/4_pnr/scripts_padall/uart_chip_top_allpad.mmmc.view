@@ -1,0 +1,41 @@
+########################################
+# UART V3 chip-level MMMC (ALL PAD)
+# Top : uart_chip_top_allpad / Clock : 100 MHz (10 ns)
+# Lib : GPDK045 basicCells + giolib045 PAD (SS / FF), QRC tech file only (no cap table)
+########################################
+
+set GPDK /GPDK045/digital/gsclib045_all_v4.4
+set GIO  /GPDK045/digital/giolib045_v3.5
+
+########## RC Corner ##########
+create_rc_corner -name BEST \
+   -T 0 \
+   -qx_tech_file $GPDK/gsclib045/qrc/qx/gpdk045.tch
+
+create_rc_corner -name WORST \
+   -T 125 \
+   -qx_tech_file $GPDK/gsclib045/qrc/qx/gpdk045.tch
+
+########## Library Set ##########
+create_library_set -name FF_Min_1p10v_0c \
+   -timing [list $GPDK/gsclib045/timing/fast_vdd1v0_basicCells.lib \
+                 $GIO/timing/pads_FF_s1vg.lib]
+
+create_library_set -name SS_Max_0p90v_125c \
+   -timing [list $GPDK/gsclib045/timing/slow_vdd1v0_basicCells.lib \
+                 $GIO/timing/pads_SS_s1vg.lib]
+
+########## Delay Corner ##########
+create_delay_corner -name FF_BEST  -library_set FF_Min_1p10v_0c   -rc_corner BEST
+create_delay_corner -name SS_WORST -library_set SS_Max_0p90v_125c -rc_corner WORST
+
+########## Constraint Mode ##########
+create_constraint_mode -name FUNC \
+   -sdc_files [list uart_chip_top_allpad_10ns_pnr.sdc]
+
+########## Analysis View ##########
+create_analysis_view -name FUNC_FF_BEST  -constraint_mode FUNC -delay_corner FF_BEST
+create_analysis_view -name FUNC_SS_WORST -constraint_mode FUNC -delay_corner SS_WORST
+
+set_analysis_view -setup [list FUNC_SS_WORST] \
+                  -hold  [list FUNC_FF_BEST]

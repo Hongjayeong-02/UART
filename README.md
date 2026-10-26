@@ -6,7 +6,7 @@
 |---|---|---|
 | V1 | UART core (baud gen, TX, RX), loopback TB · 1 GHz 합성·P&R(V3와 같은 flow) | [`UART_V1/`](UART_V1) |
 | V2 | APB register, TX/RX FIFO, interrupt, 모듈별 TB · 1 GHz 합성·P&R(V3와 같은 flow) | [`UART_V2/`](UART_V2) |
-| **V3** | APB3 peripheral IP, 1 GHz 합성·RTL 최적화·P&R·post-layout GLS | [`UART_V3/`](UART_V3) |
+| **V3** | APB3 peripheral IP, 1 GHz 합성·RTL 최적화·P&R·post-layout GLS · **10 ns 과제 P&R · PAD top · LEC** | [`UART_V3/`](UART_V3) |
 
 ### V1 · V2 · V3 공통 방법론 비교 (post-route, 1 GHz 목표)
 
@@ -42,14 +42,37 @@
 | Reset | 2-FF reset synchronizer(⑨) — recovery 181/181, removal 181/181 MET (⑦의 −7 ps 해소, ⑨ QRC에서도 동일) |
 | 검증 | regression 33/33 (매 수정), FIFO reset 동등성 50만 cycle, **gate-level regression 33/33 (SS/FF SDF, ⑨ · ⑨ QRC)** · SDF annotation 경고 181건 = reset 핀 REMOVAL/RECREM이 셀 모델($hold/$recovery)과 이름 불일치 → reset timing은 GLS가 아니라 STA(recovery/removal 181/181)로 확인 |
 | 타이밍 예외 | MCP 후보를 RTL·assertion으로 선별 → what-if STA WNS +12 ps → **미채택** |
-| 상태 | **1 GHz 미달성** · LEC 미실행 · GLS는 48 MHz TB clock (at-speed 아님) |
+| 상태 | **1 GHz 미달성** · GLS는 48 MHz TB clock (at-speed 아님) · LEC는 아래 10 ns 절 |
 
 - 1 MHz P&R placement 이슈: [docs/UART_V3/pnr_placement_issue.md](docs/UART_V3/pnr_placement_issue.md)
 - LEC runbook: [docs/UART_V3/lec_runbook.md](docs/UART_V3/lec_runbook.md)
 
+## 과제 조건 10 ns (100 MHz) · PAD top · LEC
+
+같은 RTL(⑨)을 과제 제출 조건인 10 ns로 다시 합성·P&R하고, Conformal LEC를 실행했다. 1 GHz 결과는 연구 기록으로 그대로 둔다.
+
+| | V3 블록 (`uart_apb`) | PAD top B (`uart_chip_top_allpad`, 82 pad) |
+|---|---|---|
+| SDC | `uart_v3_10ns.sdc` (period 10 ns, I/O delay **40 %**) | `uart_v3_10ns_pad.sdc` (위 + 입력 `set_input_transition 0.5`) |
+| 합성 I2O / I2R / R2O / R2R (ps) | +758 / +4,276 / +4,906 / +7,709 | −82 / +3,846 / +4,099 / +7,785 |
+| **post-route setup WNS** | **+0.385 ns** (위반 0) | −0.321 ns (17 paths, 모두 I2O) |
+| **post-route hold WNS** | **+0.006 ns** (위반 0) | +0.021 ns (위반 0) |
+| DRC · Conn | 0 · 0 | 0 · 28 (pad ring, 아래) |
+| 면적 (`report_area`) | 3,703.5 µm² (1,040 inst, density 63.4 %, 1차 run) | 1,185,575 µm² (대부분 pad, density 0.258 %) |
+| **Conformal LEC** RTL ⑨ ↔ 합성 netlist | **PASS** · Equivalent 368 (PO 36 + DFF 332) · Non-eq 0 · Abort 0 | — |
+
+- **I/O 40 %**: 60 %면 입력 + 출력 delay가 12 ns > 10 ns라 I2O 경로(`i_paddr → o_prdata`)는 clock과 무관하게 불가능하다(합성 −2,702 ps). 40 %에서 +758 ps.
+- **PAD top SDC**: 블록용 `set_driving_cell BUFX2`를 그대로 쓰면 BUFX2가 PADDI의 PAD 핀(≈ 2.4 pF)을 구동하는 가정이 돼 transition 29.7 ns, I2R −29.6 ns의 가짜 위반이 생긴다. PAD top 전용 SDC에서 `set_input_transition 0.5`(가정값)로 바꿨다.
+- **B setup −0.321 ns**: PADDI(604 ps) + PADDO(932 ps)가 칩 안 예산을 차지하고, die 1.9 mm라 pad ↔ core 배선이 길다. 통과시키려고 예산을 줄이지 않았다.
+- **pad 보존**: 안 쓰는·상수 포트의 pad가 합성에서 지워지지 않도록 elaborate 직후 PADDI/PADDO에 `preserve`(82/82 유지).
+- **B 전원**: `giolib045_modify.lef`(PADVDD/PADVSS `CLASS PAD AREAIO`)로 sroute가 전원 pad 4개를 core ring에 연결. 남은 Conn 28건은 IO ring 구간이며 pad LEF에 ring 모양이 없어 연속성을 증명할 수 없다 → **칩 레벨 전원 무결성은 미검증**.
+- **hold**: 1차 run의 위반 3개 중 2개는 `rst_n → r_rstSync_reg[0/1]/RN` removal. 10 ns P&R SDC에는 `set_ideal_network rst_n`이 있어 hold 수정이 "IPO ignored"로 건너뛰었다(1 GHz P&R SDC에는 이 줄이 없음). reset synchronizer 첫 단은 비동기 해제를 전제로 한 회로라 `set_false_path -from [get_ports rst_n]`(V3·B만, V1/V2는 rst_n이 모든 flop에 가므로 적용 안 함). 나머지 1개(−4 ps)는 `setOptMode -holdTargetSlack 0.02`로 해결.
+- **LEC**: 1차는 FAIL(Non-eq 2, Not-mapped 1). Genus가 항상 반대 값인 `o_txReady`를 `~o_txBusy`로 sequential merge한 것이 원인. `set analyze option -auto`로 merge를 모델링해 PASS, `o_txReady`는 Inverted-equivalent. Unreachable 2(`uut_rx` `o_falseStart`, `o_rxBusy`: 상위에서 안 쓰는 출력). 범위는 **RTL ↔ 합성 netlist**까지이며 합성 ↔ P&R netlist는 미실행.
+- 서버 `**ERROR` 25건은 OpenAccess 라이브러리 없음(17) · MS constraint 저장(6) · scan chain 미정의(2)로, 1 GHz run과 같은 환경 메시지다.
+
 ## 도구
 
-Cadence Genus · Innovus · Xcelium · (Conformal LEC 예정) · Icarus Verilog · GPDK045 (교육용 PDK, 미포함)
+Cadence Genus · Innovus · Xcelium · Conformal LEC · Icarus Verilog · GPDK045 (교육용 PDK, 미포함)
 
 ---
 Hong Jayoung · github.com/Hongjayeong-02

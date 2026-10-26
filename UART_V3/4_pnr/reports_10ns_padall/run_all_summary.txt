@@ -1,0 +1,11 @@
+== PNR_10NS_PADALL : **ERROR 분류 (OA 라이브러리 없음 · MS constraint 저장 · scan chain 미정의 = 서버 환경 메시지)
+      1 **ERROR: (IMPOAX-8033):	OpenAccess features will be disabled in this session.
+      7 **ERROR: (IMPOAX-8053):	Could not open shared library libcdsSkillPcell.so : /tools/cadence/DDI221/INNOVUS221/t
+      7 **ERROR: (IMPOAX-8053):	Could not open shared library libinnovusoax22.so : liboaPrivateCDS.so: cannot open sha
+      1 **ERROR: (IMPOAX-820):	The OpenAccess (OA) features are disabled in the current session of Innovus because the
+      1 **ERROR: (IMPOAX-850):	oaxCreateCdsLibArray command cannot be run as OpenAccess features are disabled in this 
+      2 **ERROR: (IMPSP-9099):	Scan chains exist in this design but are not defined for 38.86% flops. Placement and ti
+      6 **ERROR: (IMPSYT-6245):	Error , while saving MS constraint file.
+== hold fix 요약
+*info: Added a total of 215 cells to fix/reduce hold violation
+*info: Added a total of 2 cells to fix/reduce hold violation

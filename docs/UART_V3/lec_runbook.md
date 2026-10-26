@@ -2,10 +2,31 @@
 
 | 항목 | 상태 |
 |---|---|
-| `run_lec.do` 작성 | 완료 (기록 확인) |
-| 파일 경로 점검 | 완료 (기록 확인) |
-| Conformal 실제 실행 | **미실행** |
-| Equivalent PASS | **미확보** |
+| Conformal 실제 실행 | **완료 (2026-10-26, 수업 서버)** |
+| RTL ⑨ ↔ 10 ns 합성 netlist (`uart_apb`) | **PASS** (Equivalent 368, Non-eq 0, Abort 0) |
+| 합성 netlist ↔ P&R netlist | 미실행 |
+| dofile · log | `UART_V3/6_verify/lec/` (`run_lec.do` 1차, `run_lec2.do` 2차) |
+
+## 실행 결과 (2026-10-26)
+
+| | 1차 `run_lec.do` | 2차 `run_lec2.do` |
+|---|---|---|
+| 추가 설정 | `set flatten model -seq_constant` | + `-seq_constant_x_to 0`, `set analyze option -auto` |
+| Compare Results | FAIL:NONEQ | **PASS** |
+| Equivalent | PO 36 + DFF 330 = 366 | PO 36 + DFF 332 = **368** |
+| Non-equivalent | 2 (`uut_tx_fifo/r_fifoRdEn_reg`, `uut_tx_fifo/r_state_reg[0]`) | 0 |
+| Not-mapped DFF | 1 (`uut_tx/o_txReady_reg`) | 0 |
+| Inverted-equivalent | — | 1 (sequential merge) |
+| Unreachable DFF | 2 | 2 (`uut_rx/o_falseStart_reg`, `uut_rx/o_rxBusy_reg`) |
+
+- 원인: `o_txReady`는 모든 state에서 `~o_txBusy`라 Genus가 flop을 하나로 합쳤다. LEC는 golden의 `o_txReady_reg` 짝을 못 찾아 자유 입력으로 보고, 이를 쓰는 TX FIFO flop 2개를 Non-eq로 냈다. `set analyze option -auto`가 "Modeling sequential merge"로 처리.
+- Unreachable 2개는 상위 모듈에서 쓰지 않는 RX 상태 출력이라 Genus가 삭제. 기능 문제 아님 (RTL 정리 후보).
+- Golden 파일: `uart_apb` 아래 10개. `uart_chip_top.v`(PAD top), `uart_v2_top.v`(옛 wrapper)는 다른 top이라 제외.
+- 원본 RTL → ③ 사이의 FIFO 저장칸 reset 변경은 이 LEC의 범위가 아니다(⑨ RTL ↔ ⑨ netlist 비교).
+
+---
+
+아래는 실행 전에 작성한 계획(1 MHz PAD netlist 기준 템플릿)이다.
 
 > 이 문서의 dofile은 보고서에 남은 발췌본을 바탕으로 **구조를 정리한 템플릿**이다. 서버 원본(`run_lec.do`)이 아니다. 실행 전에 반드시 원본과 비교한다.
 
