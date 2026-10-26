@@ -61,6 +61,7 @@
 | 면적 (`report_area`) | **3,716.5 µm²** (1,046 inst, hold buffer 17개) | 1,185,575 µm² (대부분 pad, density 0.258 %) |
 | **gate-level regression** (최종 netlist + SDF) | **33/33** × SS/FF × TB clock **100 MHz(at-speed)** / 48 MHz, RTL과 diff 0, timing violation 0 | — |
 | **Conformal LEC** RTL ⑨ ↔ 합성 netlist | **PASS** · Equivalent 368 (PO 36 + DFF 332) · Non-eq 0 · Abort 0 | — |
+| **Conformal LEC** 합성 netlist ↔ P&R netlist (최종) | **PASS** · Equivalent 368 · Non-eq 0 · Abort 0 · unmapped 0 | — |
 
 | | V1 | V2 | **V3 ⑨** |
 |---|---|---|---|
@@ -87,7 +88,7 @@ V1 · V2 · V3 모두 같은 10 ns SDC와 P&R 스크립트다. V3만 rst_n false
   | setup WNS | +0.370 ns | **+0.367 ns** | +0.385 ns |
 
   min input delay 0인 입력 → FF 경로 대부분이 hold 여유 0~20 ps라, +20 ps 목표는 buffer 170개(+8.3 % 면적)를 더 써서 여유 4 ps를 산 셈이다.
-- **LEC**: 1차는 FAIL(Non-eq 2, Not-mapped 1). Genus가 항상 반대 값인 `o_txReady`를 `~o_txBusy`로 sequential merge한 것이 원인. `set analyze option -auto`로 merge를 모델링해 PASS, `o_txReady`는 Inverted-equivalent. Unreachable 2(`uut_rx` `o_falseStart`, `o_rxBusy`: 상위에서 안 쓰는 출력). 범위는 **RTL ↔ 합성 netlist**까지이며 합성 ↔ P&R netlist는 미실행.
+- **LEC**: 1차는 FAIL(Non-eq 2, Not-mapped 1). Genus가 항상 반대 값인 `o_txReady`를 `~o_txBusy`로 sequential merge한 것이 원인. `set analyze option -auto`로 merge를 모델링해 PASS, `o_txReady`는 Inverted-equivalent. Unreachable 2(`uut_rx` `o_falseStart`, `o_rxBusy`: 상위에서 안 쓰는 출력). 합성 netlist ↔ P&R netlist(CTS · hold buffer 17개 포함)도 PASS(368 Equivalent, unmapped 0) → **RTL → 합성 → P&R 전 구간 동등성 확인**.
 - 서버 `**ERROR` 25건은 OpenAccess 라이브러리 없음(17) · MS constraint 저장(6) · scan chain 미정의(2)로, 1 GHz run과 같은 환경 메시지다.
 
 ## 도구

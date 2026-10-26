@@ -4,7 +4,7 @@
 |---|---|
 | Conformal 실제 실행 | **완료 (2026-10-26, 수업 서버)** |
 | RTL ⑨ ↔ 10 ns 합성 netlist (`uart_apb`) | **PASS** (Equivalent 368, Non-eq 0, Abort 0) |
-| 합성 netlist ↔ P&R netlist | 미실행 |
+| 합성 netlist ↔ P&R netlist (10 ns 최종, hold 목표 +5 ps) | **PASS** (Equivalent 368, Non-eq 0, Abort 0, unmapped 0) · `6_verify/lec/run_lec_pnr.do` |
 | dofile · log | `UART_V3/6_verify/lec/` (`run_lec.do` 1차, `run_lec2.do` 2차) |
 
 ## 실행 결과 (2026-10-26)

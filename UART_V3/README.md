@@ -16,7 +16,7 @@ even/odd parity, 1/2 stop bit, RX data / parity·frame error / overflow interrup
 | `4_pnr/` | Innovus 스크립트 0~5, MMMC(cap table 제거본), P&R SDC, sweep 스크립트, MCP what-if(`scripts/mcp_whatif.tcl`), 리포트(**최종 ⑨ QRC `reports_rsync9_qrc/`**, ⑦ QRC `reports_pipe7_qrc/`, cap table flow: ⑦ `reports_pipe7/`, ⑧ `reports_rxp8/`, ⑨ `reports_rsync9/`) |
 | `4_pnr/` (10 ns) | `scripts_10ns/`(V3: 바뀐 파일만 · rst_n false path SDC · hold 목표 +5 ps, 2차는 +20 ps), `scripts_padall/`(PAD top 전체 flow, IO 파일 생성 · modify LEF), **`reports_10ns_v3_h5/` (최종, hold 목표 +5 ps)**, `reports_10ns_v3/` (2차 +20 ps, `run1/` = 1차), `reports_10ns_padall/` (`run1/` = 1차) |
 | `5_gls/` | post-layout GLS용 SDF 설정 (smoke: max / min / recrem split, gate-level regression: `gl_max` / `gl_min`, ⑨ QRC: `glq_max` / `glq_min`, **10 ns 최종: `g10_{max,min}_{100,48}.cmd`**) · `gl10.sh`(10 ns GL 실행 스크립트) |
-| `6_verify/` | regression 결과(`regression/*_pf.txt`), 동등성 비교 TB(`equivalence/`), 면적 합산 `area.awk`, **Conformal LEC**(`lec/`: dofile 2개 · log 2개) |
+| `6_verify/` | regression 결과(`regression/*_pf.txt`), 동등성 비교 TB(`equivalence/`), 면적 합산 `area.awk`, **Conformal LEC**(`lec/`: RTL↔합성 `run_lec*.do`, 합성↔P&R `run_lec_pnr.do`, console 로그) |
 
 ## 바로 돌려 보기 (Icarus Verilog)
 
