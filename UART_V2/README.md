@@ -30,15 +30,15 @@ V2의 hold 위반은 V1과 같은 `rst_n → FF/RN` removal이다.
 
 V3 10 ns run과 같은 SDC(`uart_v3_10ns.sdc`, I/O delay 40 %) · 같은 P&R 스크립트. rst_n false path · hold 목표는 넣지 않았다.
 
-| post-route | V2 (10 ns) | V3 ⑨ (10 ns, 최종) |
+| post-route | V2 (10 ns) | V3 ⑨ (10 ns, 최종 = hold 목표 +5 ps) |
 |---|---|---|
-| setup WNS all / reg2reg | +0.382 / +7.279 ns | +0.385 / +7.440 ns |
-| hold WNS / 위반 | −0.080 ns / **169** (리포트 상위 경로: 모두 `rst_n → FF/RN` removal, 일반 hold 위반 0) | +0.006 ns / 0 |
-| 셀 / 면적 (`report_area`) | 1,304 / 4,707.972 µm² | 1,210 / 4,013.028 µm² |
+| setup WNS all / reg2reg | +0.382 / +7.279 ns | +0.367 / +7.447 ns |
+| hold WNS / 위반 | −0.080 ns / **169** (리포트 상위 경로: 모두 `rst_n → FF/RN` removal, 일반 hold 위반 0) | +0.002 ns / 0 |
+| 셀 / 면적 (`report_area`) | 1,304 / 4,707.972 µm² | 1,046 / 3,716.514 µm² |
 | DRC · Conn | 0 · 0 | 0 · 0 |
 
 1 GHz(176)와 마찬가지로 10 ns(169)에서도 reset 핀 removal 위반이 남는다. V3는 reset synchronizer + rst_n false path(synchronizer 첫 단만)로 0.
-V3 면적에는 hold 목표 +20 ps로 들어간 hold buffer 181개가 포함돼 있다.
+V3 면적에는 hold buffer 17개가 포함돼 있다(hold 목표 +5 ps).
 
 ## 서버 경로 기준
 

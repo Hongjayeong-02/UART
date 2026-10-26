@@ -55,27 +55,37 @@
 |---|---|---|
 | SDC | `uart_v3_10ns.sdc` (period 10 ns, I/O delay **40 %**) | `uart_v3_10ns_pad.sdc` (위 + 입력 `set_input_transition 0.5`) |
 | 합성 I2O / I2R / R2O / R2R (ps) | +758 / +4,276 / +4,906 / +7,709 | −82 / +3,846 / +4,099 / +7,785 |
-| **post-route setup WNS** | **+0.385 ns** (위반 0) | −0.321 ns (17 paths, 모두 I2O) |
-| **post-route hold WNS** | **+0.006 ns** (위반 0) | +0.021 ns (위반 0) |
+| **post-route setup WNS** | **+0.367 ns** (위반 0) | −0.321 ns (17 paths, 모두 I2O) |
+| **post-route hold WNS** | **+0.002 ns** (위반 0) | +0.021 ns (위반 0) |
 | DRC · Conn | 0 · 0 | 0 · 28 (pad ring, 아래) |
-| 면적 (`report_area`) | 4,013.0 µm² (1,210 inst, hold buffer 181개 · 1차 11개) · hold 목표 +20 ps 전 1차 run은 3,703.5 µm² | 1,185,575 µm² (대부분 pad, density 0.258 %) |
+| 면적 (`report_area`) | **3,716.5 µm²** (1,046 inst, hold buffer 17개) | 1,185,575 µm² (대부분 pad, density 0.258 %) |
 | **Conformal LEC** RTL ⑨ ↔ 합성 netlist | **PASS** · Equivalent 368 (PO 36 + DFF 332) · Non-eq 0 · Abort 0 | — |
 
 | | V1 | V2 | **V3 ⑨** |
 |---|---|---|---|
-| post-route setup WNS | +5.173 ns | +0.382 ns | **+0.385 ns** |
+| post-route setup WNS | +5.173 ns | +0.382 ns | **+0.367 ns** |
 | hold 위반 (reset 핀 removal) | 68 | 169 | **0** |
-| 셀 / 면적 | 239 / 759 µm² | 1,304 / 4,708 µm² | 1,210 / 4,013 µm² |
+| 셀 / 면적 | 239 / 759 µm² | 1,304 / 4,708 µm² | 1,046 / 3,717 µm² |
 | DRC · Conn | 0 · 0 | 0 · 0 | 0 · 0 |
 
-V1 · V2 · V3 모두 같은 10 ns SDC와 P&R 스크립트다. V3만 rst_n false path(reset synchronizer 첫 단)와 hold 목표 +20 ps를 넣었다.
+V1 · V2 · V3 모두 같은 10 ns SDC와 P&R 스크립트다. V3만 rst_n false path(reset synchronizer 첫 단)와 hold 목표 +5 ps를 넣었다.
 
 - **I/O 40 %**: 60 %면 입력 + 출력 delay가 12 ns > 10 ns라 I2O 경로(`i_paddr → o_prdata`)는 clock과 무관하게 불가능하다(합성 −2,702 ps). 40 %에서 +758 ps.
 - **PAD top SDC**: 블록용 `set_driving_cell BUFX2`를 그대로 쓰면 BUFX2가 PADDI의 PAD 핀(≈ 2.4 pF)을 구동하는 가정이 돼 transition 29.7 ns, I2R −29.6 ns의 가짜 위반이 생긴다. PAD top 전용 SDC에서 `set_input_transition 0.5`(가정값)로 바꿨다.
 - **B setup −0.321 ns**: PADDI(604 ps) + PADDO(932 ps)가 칩 안 예산을 차지하고, die 1.9 mm라 pad ↔ core 배선이 길다. 통과시키려고 예산을 줄이지 않았다.
 - **pad 보존**: 안 쓰는·상수 포트의 pad가 합성에서 지워지지 않도록 elaborate 직후 PADDI/PADDO에 `preserve`(82/82 유지).
 - **B 전원**: `giolib045_modify.lef`(PADVDD/PADVSS `CLASS PAD AREAIO`)로 sroute가 전원 pad 4개를 core ring에 연결. 남은 Conn 28건은 IO ring 구간이며 pad LEF에 ring 모양이 없어 연속성을 증명할 수 없다 → **칩 레벨 전원 무결성은 미검증**.
-- **hold**: 1차 run의 위반 3개 중 2개는 `rst_n → r_rstSync_reg[0/1]/RN` removal. 10 ns P&R SDC에는 `set_ideal_network rst_n`이 있어 hold 수정이 "IPO ignored"로 건너뛰었다(1 GHz P&R SDC에는 이 줄이 없음). reset synchronizer 첫 단은 비동기 해제를 전제로 한 회로라 `set_false_path -from [get_ports rst_n]`(V3·B만, V1/V2는 rst_n이 모든 flop에 가므로 적용 안 함). 나머지 1개(−4 ps)는 `setOptMode -holdTargetSlack 0.02`로 해결.
+- **hold**: 1차 run의 위반 3개 중 2개는 `rst_n → r_rstSync_reg[0/1]/RN` removal. 10 ns P&R SDC에는 `set_ideal_network rst_n`이 있어 hold 수정이 "IPO ignored"로 건너뛰었다(1 GHz P&R SDC에는 이 줄이 없음). reset synchronizer 첫 단은 비동기 해제를 전제로 한 회로라 `set_false_path -from [get_ports rst_n]`(V3·B만, V1/V2는 rst_n이 모든 flop에 가므로 적용 안 함). 나머지 1개(−4 ps)는 `setOptMode -holdTargetSlack`(최종 0.005)로 해결.
+- **hold 목표 비교 (V3)**: 같은 조건에서 `holdTargetSlack`만 바꿔 세 번 돌렸다. 최종은 +5 ps(`reports_10ns_v3_h5/`).
+
+  | hold 목표 | 0 ps (1차, rst_n 예외 전) | **+5 ps (최종)** | +20 ps (2차) |
+  |---|---|---|---|
+  | hold buffer (FE_PHC) | 11 | **17** | 181 |
+  | 면적 | 3,703.5 µm² | **3,716.5 µm²** | 4,013.0 µm² |
+  | hold WNS | −76 ps (위반 3) | **+2 ps** | +6 ps |
+  | setup WNS | +0.370 ns | **+0.367 ns** | +0.385 ns |
+
+  min input delay 0인 입력 → FF 경로 대부분이 hold 여유 0~20 ps라, +20 ps 목표는 buffer 170개(+8.3 % 면적)를 더 써서 여유 4 ps를 산 셈이다.
 - **LEC**: 1차는 FAIL(Non-eq 2, Not-mapped 1). Genus가 항상 반대 값인 `o_txReady`를 `~o_txBusy`로 sequential merge한 것이 원인. `set analyze option -auto`로 merge를 모델링해 PASS, `o_txReady`는 Inverted-equivalent. Unreachable 2(`uut_rx` `o_falseStart`, `o_rxBusy`: 상위에서 안 쓰는 출력). 범위는 **RTL ↔ 합성 netlist**까지이며 합성 ↔ P&R netlist는 미실행.
 - 서버 `**ERROR` 25건은 OpenAccess 라이브러리 없음(17) · MS constraint 저장(6) · scan chain 미정의(2)로, 1 GHz run과 같은 환경 메시지다.
 

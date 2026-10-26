@@ -27,7 +27,7 @@ setAnalysisMode -analysisType onChipVariation -cppr both
 
 ## 3. postRoute optimization : setup → hold
 optDesign -postRoute       -outDir reports/postRoute_opt
-setOptMode -holdTargetSlack 0.02
+setOptMode -holdTargetSlack 0.005
 optDesign -postRoute -hold -outDir reports/postRoute_hold_opt
 
 ## 4. Physical verification

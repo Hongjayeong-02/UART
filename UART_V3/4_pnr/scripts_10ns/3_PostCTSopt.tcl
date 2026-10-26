@@ -30,7 +30,7 @@ ccopt_design
 
 ## 4. postCTS optimization : setup → hold
 optDesign -postCTS       -outDir reports/postCTS_opt
-setOptMode -holdTargetSlack 0.02
+setOptMode -holdTargetSlack 0.005
 optDesign -postCTS -hold -outDir reports/postCTS_hold_opt
 
 ## 5. Check & report
