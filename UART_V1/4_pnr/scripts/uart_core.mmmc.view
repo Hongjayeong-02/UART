@@ -1,5 +1,5 @@
 ########################################
-# UART V3 Block-level MMMC
+# UART V1 Block-level MMMC
 # Top : uart_core / Clock : 1 GHz
 # Lib : GPDK045 basicCells (multibit, PAD 미사용)
 ########################################

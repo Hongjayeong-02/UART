@@ -1,6 +1,6 @@
 ########################################
-# UART V3 Block-level P&R : CTS + postCTS Opt
-# Top   : uart_apb (clock : clk, 1 MHz)
+# UART V2 Block-level P&R : CTS + postCTS Opt
+# Top   : uart_apb (clock : clk, 1 GHz — SDC는 MMMC에서 지정)
 # Input : PlaceOpt
 # Run   : innovus source 3_PostCTSopt.tcl
 ########################################

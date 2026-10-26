@@ -1,5 +1,5 @@
 ########################################
-# UART V3 Block-level P&R : ChipFinish
+# UART V1 Block-level P&R : ChipFinish
 # Top   : uart_core
 # Input : RouteDesign
 # Run   : innovus source 5_ChipFinish.tcl

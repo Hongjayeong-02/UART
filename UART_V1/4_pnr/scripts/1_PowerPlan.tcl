@@ -1,5 +1,5 @@
 ########################################
-# UART V3 Block-level P&R : PowerPlan
+# UART V1 Block-level P&R : PowerPlan
 # Top   : uart_core
 # Input : InitDesign (같은 세션이면 restore 불필요)
 # Run   : innovus 프롬프트에서 source 1_PowerPlan.tcl

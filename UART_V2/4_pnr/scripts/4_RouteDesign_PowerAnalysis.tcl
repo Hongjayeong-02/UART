@@ -1,5 +1,5 @@
 ########################################
-# UART V3 Block-level P&R : Route + postRoute Opt + Power
+# UART V2 Block-level P&R : Route + postRoute Opt + Power
 # Top   : uart_apb
 # Input : PostCTSopt
 # Run   : innovus source 4_RouteDesign_PowerAnalysis.tcl

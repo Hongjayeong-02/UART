@@ -1,6 +1,6 @@
 ########################################
-# UART V3 Block-level P&R : InitDesign
-# Top   : uart_core (PAD 없음, 1 MHz)
+# UART V1 Block-level P&R : InitDesign
+# Top   : uart_core (PAD 없음, 1 GHz — SDC는 MMMC에서 지정)
 # Mode  : Innovus legacy (no -stylus)
 # Run   : cd /home/hah006/PROJ1/proj1_make/TOP/PNR
 #         innovus -nowin -log InitDesign
@@ -27,9 +27,9 @@ globalNetConnect VSS -type pgpin -pin VSS -inst * -override
 floorPlan -site CoreSite -r 1.0 0.6 15 15 15 15
 
 ## 4. Pin placement
-##    Left  : clock/reset + APB 입력
-##    Right : APB 출력
-##    Top   : UART RX/TX + IRQ
+##    Left  : clock/reset + TX 입력 (i_txValid, i_txData)
+##    Right : TX 상태 · RX 출력
+##    Top   : UART RX/TX
 set pins_left  [concat clk rst_n i_txValid [dbGet top.terms.name i_txData*]]
 set pins_right [concat o_txReady o_txBusy [dbGet top.terms.name o_rxData*] o_rxValid o_frameErr]
 set pins_top   [list i_uartRx o_uartTx]

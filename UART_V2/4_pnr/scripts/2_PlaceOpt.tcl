@@ -1,5 +1,5 @@
 ########################################
-# UART V3 Block-level P&R : Placement + preCTS Opt
+# UART V2 Block-level P&R : Placement + preCTS Opt
 # Top   : uart_apb
 # Input : PowerPlan
 # Run   : innovus source 2_PlaceOpt.tcl

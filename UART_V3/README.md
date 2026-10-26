@@ -72,6 +72,10 @@ MCP what-if는 ChipFinish DB를 연 뒤 `set_interactive_constraint_modes [all_c
 
 cap table flow는 배선 전 예측이 비관적이라 셀이 과하게 upsizing됐다. run은 조건마다 1회씩이다.
 
+## check_timing (최종 ⑨ QRC, `4_pnr/reports_rsync9_qrc/check_timing.rpt`)
+
+unconstrained endpoint 19개는 모두 의도된 항목이다: `o_prdata[31:16]` 16개 · `o_pslverr`(TIELO 상수 출력), `o_uartTx`(false path), `r_rstSync_reg[0]/D`(상수 1 입력). 그 밖에 `clk` no drive, `i_uartRx` no input delay(false path). 전체 최악 경로는 `i_paddr[2] → o_prdata[6]`(APB 읽기 입력 → 출력 조합 경로, `worst_all.rpt`).
+
 `5_gls/*.cmd`의 `SDF_FILE`은 학교 서버의 절대 경로(`/home/hah006/...`)다. 다른 환경에서는 SDF 경로를 바꿔야 한다.
 
 GPDK045 라이브러리(.lib/.lef/capTbl), netlist, SDF, GDS, Innovus DB는 라이선스·용량 때문에 포함하지 않는다.
