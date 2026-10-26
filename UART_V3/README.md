@@ -10,7 +10,7 @@ even/odd parity, 1/2 stop bit, RX data / parity·frame error / overflow interrup
 |---|---|
 | `1_rtl/` | **최종 RTL (⑨ = ⑦ + reset synchronizer)**. top: `uart_apb`(peripheral), `uart_chip_top`(PAD 포함) |
 | `patches/` | 원본 → ③ → ④ → ⑦ → ⑨ 단계별 `diff -ruN`, ⑤ 기각안, ⑧ 미채택안 |
-| `2_tb/` | `tb_uart_v3_final.v`(regression 34 checks), `tb_uart_v3_final_gl.v`(같은 34 checks, 내부 신호 참조 없음 → gate-level용), `mcp_checker.sv`(MCP 근거 assertion), GLS·PAD TB |
+| `2_tb/` | `tb_uart_v3_final.v`(regression 33 checks), `tb_uart_v3_final_gl.v`(같은 33 checks, 내부 신호 참조 없음 → gate-level용), `mcp_checker.sv`(MCP 근거 assertion), GLS·PAD TB |
 | `3_syn/` | 1 GHz SDC(`cons/`), Genus 스크립트(`script/`), 핵심 리포트(④ `opt4`, ⑦ `pipe7`, ⑧ `rxp8`, ⑨ `rsync9`, 계층 유지 `hier`) |
 | `4_pnr/` | Innovus 스크립트 0~5, MMMC(cap table 제거본), P&R SDC, sweep 스크립트, MCP what-if(`scripts/mcp_whatif.tcl`), 리포트(**최종 ⑨ QRC `reports_rsync9_qrc/`**, ⑦ QRC `reports_pipe7_qrc/`, cap table flow: ⑦ `reports_pipe7/`, ⑧ `reports_rxp8/`, ⑨ `reports_rsync9/`) |
 | `5_gls/` | post-layout GLS용 SDF 설정 (smoke: max / min / recrem split, gate-level regression: `gl_max` / `gl_min`, ⑨ QRC: `glq_max` / `glq_min`) |
@@ -20,7 +20,7 @@ even/odd parity, 1/2 stop bit, RX data / parity·frame error / overflow interrup
 
 ```sh
 cd UART_V3
-make regress   # 최종 RTL에 34-check regression → 서버(Xcelium) 결과와 diff
+make regress   # 최종 RTL에 33-check regression → 서버(Xcelium) 결과와 diff
 make gl        # gate-level용 TB를 RTL에 실행 → regress와 diff
 make mcp       # MCP 근거 assertion
 make eq        # ③ vs ④ FIFO·TX 랜덤 비교, 원본 vs ④ FIFO reset 동등성
@@ -48,9 +48,10 @@ innovus -nowin -log run_all.log < run_all.tcl >& console.log
 # post-layout GLS (SS SDF)
 xrun -64bit -clean -access +rwc -neg_tchk -sdf_verbose -sdf_cmd_file sdf_max.cmd -top tb_uart_v3_gls \
      ../TESTBENCH/UART_V3/tb_uart_v3_post_gls.v ../../PNR_1GHZ/outputs/uart_apb_pnr.v <GPDK045 cell verilog> -l gls_max.log
-# gate-level regression (⑨, SS SDF) — min은 gl_min.cmd
-xrun -64bit -clean -access +r -neg_tchk -sdf_verbose -sdf_cmd_file gl_max.cmd -define NO_DUMP -top tb_uart_v3_final_gl \
-     ../TESTBENCH/UART_V3/tb_uart_v3_final_gl.v ../../PNR_1GHZ_RSYNC/outputs/uart_apb_pnr.v <GPDK045 cell verilog> -l gl_max.log
+# gate-level regression — 최종 ⑨ QRC (SS SDF). min은 glq_min.cmd
+xrun -64bit -clean -access +r -neg_tchk -sdf_verbose -sdf_cmd_file glq_max.cmd -define NO_DUMP -top tb_uart_v3_final_gl \
+     ../TESTBENCH/UART_V3/tb_uart_v3_final_gl.v ../../PNR_1GHZ_RSYNC_QRC/outputs/uart_apb_pnr.v <GPDK045 cell verilog> -l glq_max.log
+# (이전 cap table flow 기록: gl_max.cmd / gl_min.cmd + PNR_1GHZ_RSYNC)
 ```
 
 MCP what-if는 ChipFinish DB를 연 뒤 `set_interactive_constraint_modes [all_constraint_modes -active]` → `source mcp_whatif.tcl` 순서로 실행한다
@@ -70,5 +71,7 @@ MCP what-if는 ChipFinish DB를 연 뒤 `set_interactive_constraint_modes [all_c
 | **⑨ QRC (최종)** | −6.40 | −6.97 | **−97** | **5,830** |
 
 cap table flow는 배선 전 예측이 비관적이라 셀이 과하게 upsizing됐다. run은 조건마다 1회씩이다.
+
+`5_gls/*.cmd`의 `SDF_FILE`은 학교 서버의 절대 경로(`/home/hah006/...`)다. 다른 환경에서는 SDF 경로를 바꿔야 한다.
 
 GPDK045 라이브러리(.lib/.lef/capTbl), netlist, SDF, GDS, Innovus DB는 라이선스·용량 때문에 포함하지 않는다.

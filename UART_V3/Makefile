@@ -25,7 +25,7 @@ $(BUILD):
 regress: | $(BUILD)
 	$(IVERILOG) -s tb_uart_v3_final -o $(BUILD)/regress.vvp 2_tb/tb_uart_v3_final.v $(RTL)
 	$(VVP) $(BUILD)/regress.vvp | grep 'PASS\|FAIL' > $(BUILD)/regress_pf.txt
-	@echo "== $$(grep -c PASS $(BUILD)/regress_pf.txt) PASS / $$(grep -c FAIL $(BUILD)/regress_pf.txt) FAIL"
+	@echo "== $$(grep -c '^PASS:' $(BUILD)/regress_pf.txt) PASS / $$(grep -c '^FAIL' $(BUILD)/regress_pf.txt) FAIL (+ ALL PASS 요약 줄)"
 	diff 6_verify/regression/rsync_pf.txt $(BUILD)/regress_pf.txt && echo "== SAME AS SERVER (Xcelium) RESULT"
 
 gl: regress
