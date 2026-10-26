@@ -1,0 +1,4 @@
+    Hinst Name       Module Name                            Inst Count           Total Area
+----------------------------------------------------------------------------------------
+uart_core                                                          239              758.898
+  u_uart_rx          uart_rx_CLK_FREQ48000000_BAUD_RATE9600        123              411.084

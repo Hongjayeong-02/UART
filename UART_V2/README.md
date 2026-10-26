@@ -26,6 +26,20 @@ V3 최종 run과 **같은 SDC 파일 · corner · QRC MMMC · P&R 스크립트 0
 V2 → V3: FIFO 16단 → 8단(parameter), 메모리 맵 레지스터 재구성(9 → 8), RTL timing 수정(③④⑦), reset synchronizer(⑨). 면적·R2R 개선은 이 변경들을 **합친 효과**이고, 항목별 기여는 분리하지 않았다. 전체 WNS(−1.061 vs −1.049 ns)는 I/O 경로 때문에 거의 같다.
 V2의 hold 위반은 V1과 같은 `rst_n → FF/RN` removal이다.
 
+## 10 ns 합성 · P&R (과제 조건)
+
+V3 10 ns run과 같은 SDC(`uart_v3_10ns.sdc`, I/O delay 40 %) · 같은 P&R 스크립트. rst_n false path · hold 목표는 넣지 않았다.
+
+| post-route | V2 (10 ns) | V3 ⑨ (10 ns, 최종) |
+|---|---|---|
+| setup WNS all / reg2reg | +0.382 / +7.279 ns | +0.385 / +7.440 ns |
+| hold WNS / 위반 | −0.080 ns / **169** (리포트 상위 경로: 모두 `rst_n → FF/RN` removal, 일반 hold 위반 0) | +0.006 ns / 0 |
+| 셀 / 면적 (`report_area`) | 1,304 / 4,707.972 µm² | 1,210 / 4,013.028 µm² |
+| DRC · Conn | 0 · 0 | 0 · 0 |
+
+1 GHz(176)와 마찬가지로 10 ns(169)에서도 reset 핀 removal 위반이 남는다. V3는 reset synchronizer + rst_n false path(synchronizer 첫 단만)로 0.
+V3 면적에는 hold 목표 +20 ps로 들어간 hold buffer 181개가 포함돼 있다.
+
 ## 서버 경로 기준
 
 스크립트는 학교 서버의 디렉터리 구조 기준이라 레포를 clone해 바로 실행할 수 없다.

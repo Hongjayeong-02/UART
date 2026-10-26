@@ -31,6 +31,20 @@ V3 ⑨의 2-FF reset synchronizer가 이 문제를 없앤 구조다 (V3 recovery
 > 처음 실행 때는 PAD를 넣은 수업용 `uart_core`(clk도 `PADDI` 경유)로 합성해, PAD 셀이 블랙박스가 되어
 > clock이 FF까지 전파되지 않았다(CTS clock tree 0개, timing path 0개). PAD 없는 core로 다시 실행한 결과가 위 표다.
 
+## 10 ns 합성 · P&R (과제 조건)
+
+V3 10 ns run과 같은 SDC(`uart_v3_10ns.sdc`, period 10 ns, I/O delay 40 %) · 같은 P&R 스크립트. rst_n false path · hold 목표는 **넣지 않았다** (V1은 rst_n이 모든 FF로 가므로 예외를 넣으면 실제 문제를 숨긴다).
+
+| post-route | V1 (10 ns) |
+|---|---|
+| setup WNS all / reg2reg | +5.173 / +7.843 ns (위반 0) |
+| hold WNS / 위반 | −0.075 ns / **68** · reg2reg +6 ps · 리포트에 담긴 상위 50개는 모두 `rst_n → FF/RN` removal |
+| 셀 / 면적 (`report_area`) | 239 / 758.898 µm² |
+| DRC · Conn | 0 · 0 |
+
+clock을 10 ns로 늦춰도 removal 위반은 그대로 남는다(1 GHz 70 → 10 ns 68). 이 검사는 clock 주기가 아니라 **clock tree 지연과 rst_n 도착 시각의 차이**로 정해지기 때문이다.
+리포트: `3_syn/reports_10ns/`, `4_pnr/reports_10ns/`.
+
 ## 서버 경로 기준
 
 스크립트는 학교 서버의 디렉터리 구조 기준이라 레포를 clone해 바로 실행할 수 없다.

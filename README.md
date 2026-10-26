@@ -4,8 +4,8 @@
 
 | 버전 | 내용 | 폴더 |
 |---|---|---|
-| V1 | UART core (baud gen, TX, RX), loopback TB · 1 GHz 합성·P&R(V3와 같은 flow) | [`UART_V1/`](UART_V1) |
-| V2 | APB register, TX/RX FIFO, interrupt, 모듈별 TB · 1 GHz 합성·P&R(V3와 같은 flow) | [`UART_V2/`](UART_V2) |
+| V1 | UART core (baud gen, TX, RX), loopback TB · 1 GHz / 10 ns 합성·P&R(V3와 같은 flow) | [`UART_V1/`](UART_V1) |
+| V2 | APB register, TX/RX FIFO, interrupt, 모듈별 TB · 1 GHz / 10 ns 합성·P&R(V3와 같은 flow) | [`UART_V2/`](UART_V2) |
 | **V3** | APB3 peripheral IP, 1 GHz 합성·RTL 최적화·P&R·post-layout GLS · **10 ns 과제 P&R · PAD top · LEC** | [`UART_V3/`](UART_V3) |
 
 ### V1 · V2 · V3 공통 방법론 비교 (post-route, 1 GHz 목표)
@@ -58,8 +58,17 @@
 | **post-route setup WNS** | **+0.385 ns** (위반 0) | −0.321 ns (17 paths, 모두 I2O) |
 | **post-route hold WNS** | **+0.006 ns** (위반 0) | +0.021 ns (위반 0) |
 | DRC · Conn | 0 · 0 | 0 · 28 (pad ring, 아래) |
-| 면적 (`report_area`) | 3,703.5 µm² (1,040 inst, density 63.4 %, 1차 run) | 1,185,575 µm² (대부분 pad, density 0.258 %) |
+| 면적 (`report_area`) | 4,013.0 µm² (1,210 inst, hold buffer 181개 · 1차 11개) · hold 목표 +20 ps 전 1차 run은 3,703.5 µm² | 1,185,575 µm² (대부분 pad, density 0.258 %) |
 | **Conformal LEC** RTL ⑨ ↔ 합성 netlist | **PASS** · Equivalent 368 (PO 36 + DFF 332) · Non-eq 0 · Abort 0 | — |
+
+| | V1 | V2 | **V3 ⑨** |
+|---|---|---|---|
+| post-route setup WNS | +5.173 ns | +0.382 ns | **+0.385 ns** |
+| hold 위반 (reset 핀 removal) | 68 | 169 | **0** |
+| 셀 / 면적 | 239 / 759 µm² | 1,304 / 4,708 µm² | 1,210 / 4,013 µm² |
+| DRC · Conn | 0 · 0 | 0 · 0 | 0 · 0 |
+
+V1 · V2 · V3 모두 같은 10 ns SDC와 P&R 스크립트다. V3만 rst_n false path(reset synchronizer 첫 단)와 hold 목표 +20 ps를 넣었다.
 
 - **I/O 40 %**: 60 %면 입력 + 출력 delay가 12 ns > 10 ns라 I2O 경로(`i_paddr → o_prdata`)는 clock과 무관하게 불가능하다(합성 −2,702 ps). 40 %에서 +758 ps.
 - **PAD top SDC**: 블록용 `set_driving_cell BUFX2`를 그대로 쓰면 BUFX2가 PADDI의 PAD 핀(≈ 2.4 pF)을 구동하는 가정이 돼 transition 29.7 ns, I2R −29.6 ns의 가짜 위반이 생긴다. PAD top 전용 SDC에서 `set_input_transition 0.5`(가정값)로 바꿨다.
