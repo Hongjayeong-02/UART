@@ -1,0 +1,3 @@
+restoreDesign ChipFinish.dat uart_chip_top_allpad
+saveNetlist outputs/uart_chip_top_allpad_pnr_hier.v
+exit

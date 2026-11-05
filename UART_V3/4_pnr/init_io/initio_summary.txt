@@ -1,0 +1,10 @@
+DIE  : {0.0 0.0 1892.0 1900.0}
+CORE : {270.0 270.02 1622.0 1629.98}
+PADDI            46
+PADDO            36
+PADVDD           2
+PADVSS           2
+PADVDDIOR        2
+PADVSSIOR        2
+padIORINGCORNER  4
+IOFILL           172

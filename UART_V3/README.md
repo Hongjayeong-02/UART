@@ -9,14 +9,16 @@ even/odd parity, 1/2 stop bit, RX data / parity·frame error / overflow interrup
 | 폴더 | 내용 |
 |---|---|
 | `1_rtl/` | **최종 RTL (⑨ = ⑦ + reset synchronizer)**. top: `uart_apb`(peripheral), `uart_chip_top`(RX/TX PAD) |
+| `1_rtl_ro/` | **PADALL RO** `uart_apb.v`: read 응답을 플롭 출력으로 바꾼 버전(read +1 wait, write zero-wait). 나머지 모듈은 `1_rtl/`과 같음. 합성 결과: `3_syn/README_10ns_padall_ro.md` |
 | `1_rtl_pad/` | `uart_chip_top_allpad.v`: 외부 포트 82개 전부 PAD (PADDI 46 · PADDO 36), 10 ns 칩 레벨 P&R용 |
 | `patches/` | 원본 → ③ → ④ → ⑦ → ⑨ 단계별 `diff -ruN`, ⑤ 기각안, ⑧ 미채택안 |
 | `2_tb/` | `tb_uart_v3_final.v`(regression 33 checks), `tb_uart_v3_final_gl.v`(같은 33 checks, 내부 신호 참조 없음 → gate-level용), `mcp_checker.sv`(MCP 근거 assertion), GLS·PAD TB |
 | `3_syn/` | 1 GHz SDC(`cons/`), Genus 스크립트(`script/`), 핵심 리포트(④ `opt4`, ⑦ `pipe7`, ⑧ `rxp8`, ⑨ `rsync9`, 계층 유지 `hier`) · **10 ns**: `uart_v3_10ns.sdc`, `uart_v3_10ns_pad.sdc`, `run_synthesis_10ns_{rsync,pad2,padall}.tcl`, `reports/10ns_*` |
 | `4_pnr/` | Innovus 스크립트 0~5, MMMC(cap table 제거본), P&R SDC, sweep 스크립트, MCP what-if(`scripts/mcp_whatif.tcl`), 리포트(**최종 ⑨ QRC `reports_rsync9_qrc/`**, ⑦ QRC `reports_pipe7_qrc/`, cap table flow: ⑦ `reports_pipe7/`, ⑧ `reports_rxp8/`, ⑨ `reports_rsync9/`) |
+| `4_pnr/` (PADALL RO) | `scripts_padall_ro/`, `reports_10ns_padall_ro/` (최종 칩 레벨 P&R), **`init_io/`** (Init → floorplan → IO 배치 → IO filler, `init_io/README.md`) |
 | `4_pnr/` (10 ns) | `scripts_10ns/`(V3: 바뀐 파일만 · rst_n false path SDC · hold 목표 +5 ps, 2차는 +20 ps), `scripts_padall/`(PAD top 전체 flow, IO 파일 생성 · modify LEF), **`reports_10ns_v3_h5/` (최종, hold 목표 +5 ps)**, `reports_10ns_v3/` (2차 +20 ps, `run1/` = 1차), `reports_10ns_padall/` (`run1/` = 1차) |
 | `5_gls/` | post-layout GLS용 SDF 설정 (smoke: max / min / recrem split, gate-level regression: `gl_max` / `gl_min`, ⑨ QRC: `glq_max` / `glq_min`, **10 ns 최종: `g10_{max,min}_{100,48}.cmd`**) · `gl10.sh`(10 ns GL 실행 스크립트) |
-| `6_verify/` | regression 결과(`regression/*_pf.txt`), 동등성 비교 TB(`equivalence/`), 면적 합산 `area.awk`, **Conformal LEC**(`lec/`: RTL↔합성 `run_lec*.do`, 합성↔P&R `run_lec_pnr.do`, console 로그) |
+| `6_verify/` | `read_opt/`: V3 ↔ RO 같은 APB 시퀀스 비교 TB · regression 결과(`regression/*_pf.txt`), 동등성 비교 TB(`equivalence/`), 면적 합산 `area.awk`, **Conformal LEC**(`lec/`: RTL↔합성 `run_lec*.do`, 합성↔P&R `run_lec_pnr.do`, console 로그) |
 
 ## 바로 돌려 보기 (Icarus Verilog)
 
@@ -41,6 +43,8 @@ make eq        # ③ vs ④ FIFO·TX 랜덤 비교, 원본 vs ④ FIFO reset 동
 | `SIM/POST_1GHZ/`, `SIM/GL_RSYNC/`, `SIM/GL_10NS/` | `5_gls/` |
 | `PNR_10NS_V3_H5/` (최종), `PNR_10NS_V3/`, `PNR_10NS_PADALL/` | `4_pnr/scripts_10ns/`, `4_pnr/scripts_padall/` |
 | `RTL/UART_V3_padall/` | `1_rtl/` + `1_rtl_pad/` |
+| `RTL/UART_V3_padall_ro/`, `SYN/report_10ns_padall_ro/` | `1_rtl_ro/`, `3_syn/reports/10ns_padall_ro/` |
+| `PNR_10NS_PADALL_RO/`, `PNR_10NS_PADALL_RO_INITIO/` | `4_pnr/scripts_padall_ro/` + `reports_10ns_padall_ro/`, `4_pnr/init_io/` |
 | (수업 서버) `EC_10ns/` | `6_verify/lec/` |
 
 ```tcsh
