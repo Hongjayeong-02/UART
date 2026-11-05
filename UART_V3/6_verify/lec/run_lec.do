@@ -4,7 +4,7 @@ set log file ./log/lec_rtl2syn_10ns.log -replace
 set dofile abort exit
 
 // 1) Library (golden / revised 동일)
-read library -liberty -both /GPDK045/digital/gsclib045_all_v4.4/gsclib045/timing/slow_vdd1v0_basicCells.lib
+read library -liberty -both <PDK>/std/stdlib/timing/std_ss.lib
 
 // 2) Golden = 합성에 쓴 RTL (uart_chip_top.v 는 PAD top 이라 제외, root = uart_apb)
 read design -verilog2k -golden \

@@ -11,7 +11,7 @@
 setDesignMode -process 45
 
 ## 2. Double-height(CoreSiteDouble) 
-##    GPDK045: (Retention/LS/ISO/Switch) + BUFX2
+##    45 nm PDK: (Retention/LS/ISO/Switch) + BUFX2
 ##    floorplan 
 set dbl_cells {}
 foreach c [dbGet head.libCells.name -u] {

@@ -2,15 +2,15 @@
 # UART V3 chip-level P&R (ALL PAD) : InitDesign
 # Top   : uart_chip_top_allpad (signal PAD 82 + power PAD 8 + corner 4)
 # Clock : 100 MHz (10 ns) (MMMC: uart_chip_top_allpad_10ns_pnr.sdc)
-# Pad   : GPDK045 giolib045 v3.5 (60 x 240 um, corner 240 x 240 um)
+# Pad   : 45 nm PDK iolib (60 x 240 um, corner 240 x 240 um)
 ########################################
-set GPDK /GPDK045/digital/gsclib045_all_v4.4
-set GIO  /GPDK045/digital/giolib045_v3.5
+set PDK_STD <PDK>/std
+set GIO  <PDK>/io
 
 ## 1. Initialization (standard cell + PAD LEF)
-set init_lef_file  [list $GPDK/gsclib045_tech/lef/gsclib045_tech.lef \
-                         $GPDK/gsclib045/lef/gsclib045_macro.lef \
-                         giolib045_v2.lef]
+set init_lef_file  [list $PDK_STD/std_tech/lef/std_tech.lef \
+                         $PDK_STD/stdlib/lef/std_macro.lef \
+                         iolib_v2.lef]
 set init_verilog   ../SYN/netlist_10ns_padall_ro/uart_chip_top_allpad_netlist.v
 set init_mmmc_file uart_chip_top_allpad.mmmc.view
 set init_top_cell  uart_chip_top_allpad

@@ -56,7 +56,7 @@ xrun -64bit \
     +libext+.v \
     -incdir $RTL_DIR \
     -incdir $TB_DIR \
-    -y /GPDK045/digital/gsclib045_all_v4.4/gsclib045_svt_v4.4/gsclib045/verilog \
+    -y <PDK>/std_svt/verilog \
     $RTL_DIR/*.v \
     $TB_DIR/$TB_FILE \
     -top $TOP \

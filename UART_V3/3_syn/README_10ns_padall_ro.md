@@ -3,7 +3,7 @@
 칩 top `uart_chip_top_allpad`(외부 포트 82개 전부 PAD)를 10 ns(100 MHz)로 Genus 합성한 결과입니다.
 기존 PADALL 합성에서 I/O 경로 setup 위반이 남아, APB read 응답을 레지스터 출력으로 바꾼 **RO(read-optimized) RTL**로 다시 합성했습니다.
 
-> GPDK045의 LIB, LEF, DB 등 라이브러리 파일과 합성 netlist는 저장소에 넣지 않았습니다. 스크립트에는 서버의 PDK 경로만 적혀 있습니다.
+> PDK의 LIB, LEF, DB 등 라이브러리 파일과 합성 netlist는 저장소에 넣지 않았습니다. 스크립트에는 PDK 경로만 적혀 있습니다. 스크립트와 리포트의 PDK 경로·라이브러리 이름은 `<PDK>`, `stdlib`/`iolib`, `std_ss`/`std_ff`, `io_ss`/`io_ff`, `qrc.tch`로 바꿔 적었습니다(실행 시 실제 경로로 치환).
 
 ## 1. 합성 조건
 
@@ -11,7 +11,7 @@
 |---|---|
 | Top | `uart_chip_top_allpad` (PADDI 46, PADDO 36) |
 | RTL | `1_rtl_ro/uart_apb.v` (RO, md5 `fccbe021850ac319edccb5d0f9f7ffe8`) + 나머지 모듈은 `1_rtl/`과 동일, PAD top은 `1_rtl_pad/` |
-| 라이브러리 | GPDK045 `slow_vdd1v0` (표준 셀) + `pads_SS_s1vg` (PAD), PVT_0P9V_125C |
+| 라이브러리 | 45 nm PDK `std_ss` (표준 셀) + `io_ss` (PAD), PVT_0P9V_125C |
 | SDC | `cons/uart_v3_10ns_pad.sdc`: clock 10 ns, input delay 4 ns, output delay 4 ns, uncertainty 0.1 ns |
 | 스크립트 | `script/run_synthesis_10ns_padall_ro.tcl` |
 | 리포트 | `reports/10ns_padall_ro/` (`area.rpt`, `qor.rpt`, `timing.rpt`) |

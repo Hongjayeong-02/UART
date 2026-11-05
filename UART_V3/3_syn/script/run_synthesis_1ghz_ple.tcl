@@ -1,8 +1,8 @@
 
 # ============================================================
 # UART V3 - GENUS SYNTHESIS SCRIPT
-# Technology : GPDK045
-# Library    : slow_vdd1v0_basicCells.lib
+# Technology : 45 nm PDK
+# Library    : std_ss.lib
 # TOP        : uart_apb
 # Clock      : 1 GHz (Period = 1 ns)
 # ============================================================
@@ -27,12 +27,12 @@ file mkdir $NETLIST_DIR
 # 2. Technology Library Setup
 # ------------------------------------------------------------
 
-set LIB_PATH "/GPDK045/digital/gsclib045_all_v4.4/gsclib045/timing/slow_vdd1v0_basicCells.lib"
+set LIB_PATH "<PDK>/std/stdlib/timing/std_ss.lib"
 
 set_db init_lib_search_path [file dirname $LIB_PATH]
 set_db library $LIB_PATH
-set_db lef_library [list /GPDK045/digital/gsclib045_all_v4.4/gsclib045_tech/lef/gsclib045_tech.lef /GPDK045/digital/gsclib045_all_v4.4/gsclib045/lef/gsclib045_macro.lef]
-set_db qrc_tech_file /GPDK045/digital/gsclib045_all_v4.4/gsclib045/qrc/qx/gpdk045.tch
+set_db lef_library [list <PDK>/std/std_tech/lef/std_tech.lef <PDK>/std/stdlib/lef/std_macro.lef]
+set_db qrc_tech_file <PDK>/std/stdlib/qrc/qx/qrc.tch
 set_db interconnect_mode ple
 puts "PLE_CHECK: interconnect_mode = [get_db interconnect_mode]"
 
@@ -101,7 +101,7 @@ puts " UART V3 SYNTHESIS COMPLETED"
 puts " TOP       : uart_apb"
 puts " CLOCK     : 1 GHz"
 puts " PERIOD    : 1 ns"
-puts " LIBRARY   : slow_vdd1v0_basicCells"
+puts " LIBRARY   : std_ss"
 puts "========================================"
 
 

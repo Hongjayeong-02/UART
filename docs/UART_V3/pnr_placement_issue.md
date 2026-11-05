@@ -3,7 +3,7 @@
 | 항목 | 내용 |
 |---|---|
 | 일자 | 2026-10-17 |
-| 대상 | `uart_apb` 블록 레벨 P&R (Cadence Innovus, GPDK045) |
+| 대상 | `uart_apb` 블록 레벨 P&R (Cadence Innovus, 45 nm PDK) |
 | 증상 | `checkPlace` 위반 72건 |
 | 결과 | ECO 후 `checkPlace` 위반 0건 (기록 기준) |
 | 상태 | 해결됨. 나머지 1건의 원본 메시지 등 일부 항목은 서버에서 재확인 필요 (아래 "미확인 항목" 참고) |
@@ -35,7 +35,7 @@ Standard cell은 LEF에서 자신이 놓일 수 있는 site를 `SITE` 문으로 
 
 > 확인 필요: `CoreSiteDouble`이 double-height site인지, 다른 크기의 site인지는 LEF의 `SITE CoreSiteDouble` 정의(`SIZE`, `CLASS`)로 확인해 기록한다.
 > ```bash
-> grep -A4 'SITE CoreSite' <gpdk045 tech/std cell LEF 경로>
+> grep -A4 'SITE CoreSite' <PDK tech/std cell LEF 경로>
 > ```
 
 ## 3. 해결 (Fix)

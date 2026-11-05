@@ -13,8 +13,8 @@ in a license agreement controlling such use and disclosure.
 // Check out Conformal_Asic 22.1 license
 // Command: set log file ./log/lec_rtl2syn_10ns_auto.log -replace
 // Command: set dofile abort exit
-// Command: read library -liberty -both /GPDK045/digital/gsclib045_all_v4.4/gsclib045/timing/slow_vdd1v0_basicCells.lib
-// Parsing file /GPDK045/digital/gsclib045_all_v4.4/gsclib045/timing/slow_vdd1v0_basicCells.lib ...
+// Command: read library -liberty -both <PDK>/std/stdlib/timing/std_ss.lib
+// Parsing file <PDK>/std/stdlib/timing/std_ss.lib ...
 // Warning: (RTL9.17) Cell doesn't have any output pins or all output pins are undriven (blackboxed) (occurrence:10)
 // Note: (RTL9.26) Liberty pin with internal_node use default input_map (occurrence:16)
 // Note: Read Liberty library successfully

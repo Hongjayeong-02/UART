@@ -3,7 +3,7 @@
 set log file ./log/lec_syn2pnr_10ns.log -replace
 set dofile abort exit
 
-read library -liberty -both /GPDK045/digital/gsclib045_all_v4.4/gsclib045/timing/slow_vdd1v0_basicCells.lib
+read library -liberty -both <PDK>/std/stdlib/timing/std_ss.lib
 set undefined cell black_box -noascend -both
 
 read design -verilog -golden  ./netlist/uart_apb_netlist.v

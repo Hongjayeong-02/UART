@@ -1,29 +1,29 @@
 ########################################
 # UART V3 chip-level MMMC (ALL PAD)
 # Top : uart_chip_top_allpad / Clock : 100 MHz (10 ns)
-# Lib : GPDK045 basicCells + giolib045 PAD (SS / FF), QRC tech file only (no cap table)
+# Lib : 45 nm PDK std cells + iolib PAD (SS / FF), QRC tech file only (no cap table)
 ########################################
 
-set GPDK /GPDK045/digital/gsclib045_all_v4.4
-set GIO  /GPDK045/digital/giolib045_v3.5
+set PDK_STD <PDK>/std
+set GIO  <PDK>/io
 
 ########## RC Corner ##########
 create_rc_corner -name BEST \
    -T 0 \
-   -qx_tech_file $GPDK/gsclib045/qrc/qx/gpdk045.tch
+   -qx_tech_file $PDK_STD/stdlib/qrc/qx/qrc.tch
 
 create_rc_corner -name WORST \
    -T 125 \
-   -qx_tech_file $GPDK/gsclib045/qrc/qx/gpdk045.tch
+   -qx_tech_file $PDK_STD/stdlib/qrc/qx/qrc.tch
 
 ########## Library Set ##########
 create_library_set -name FF_Min_1p10v_0c \
-   -timing [list $GPDK/gsclib045/timing/fast_vdd1v0_basicCells.lib \
-                 $GIO/timing/pads_FF_s1vg.lib]
+   -timing [list $PDK_STD/stdlib/timing/std_ff.lib \
+                 $GIO/timing/io_ff.lib]
 
 create_library_set -name SS_Max_0p90v_125c \
-   -timing [list $GPDK/gsclib045/timing/slow_vdd1v0_basicCells.lib \
-                 $GIO/timing/pads_SS_s1vg.lib]
+   -timing [list $PDK_STD/stdlib/timing/std_ss.lib \
+                 $GIO/timing/io_ss.lib]
 
 ########## Delay Corner ##########
 create_delay_corner -name FF_BEST  -library_set FF_Min_1p10v_0c   -rc_corner BEST

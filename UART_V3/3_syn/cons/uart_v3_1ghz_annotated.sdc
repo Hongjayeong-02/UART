@@ -3,8 +3,8 @@
 # UART V3 - 1 GHz SDC
 # ============================================================
 # Design       : uart_apb (Block-level, NO PAD)
-# Technology   : GPDK045
-# Library      : slow_vdd1v0_basicCells.lib
+# Technology   : 45 nm PDK
+# Library      : std_ss.lib
 # PVT          : SS / 0.9 V / 125 C
 # Clock        : MAIN_CLOCK
 # Frequency    : 1 GHz

@@ -3,7 +3,7 @@
 UART V3 칩 레벨 top `uart_chip_top_allpad`(모든 외부 포트에 PAD)를 Innovus에서 **Init → Floorplan → IO 배치 → IO filler**까지 진행한 결과입니다.
 최종 P&R(`PNR_10NS_PADALL_RO`, 리포트는 `../reports_10ns_padall_ro/`)에서 쓴 스크립트와 IO 파일을 그대로 사용해, 새 폴더(`PNR_10NS_PADALL_RO_INITIO`)에서 Init + IO만 다시 실행했습니다.
 
-> PDK(GPDK045)의 LEF, LIB, QRC 등 라이브러리 파일은 이 저장소에 포함하지 않습니다. 스크립트에는 서버의 PDK 경로만 적혀 있습니다.
+> PDK의 LEF, LIB, QRC 등 라이브러리 파일은 이 저장소에 포함하지 않습니다. 스크립트에는 PDK 경로만 적혀 있습니다. 스크립트와 리포트의 PDK 경로·라이브러리 이름은 `<PDK>`, `stdlib`/`iolib`, `std_ss`/`std_ff`, `io_ss`/`io_ff`, `qrc.tch`로 바꿔 적었습니다(실행 시 실제 경로로 치환).
 
 ## 1. 입력
 
@@ -13,7 +13,7 @@ UART V3 칩 레벨 top `uart_chip_top_allpad`(모든 외부 포트에 PAD)를 In
 | Netlist | Genus 10 ns 합성 결과 (`uart_apb` = read-optimized RTL) |
 | Clock | `MAIN_CLOCK` 10 ns (100 MHz) |
 | SDC / MMMC | `uart_chip_top_allpad_10ns_pnr.sdc`, `uart_chip_top_allpad.mmmc.view` |
-| 표준 셀 / PAD | GPDK045 `gsclib045` / `giolib045` |
+| 표준 셀 / PAD | 45 nm PDK `stdlib` / `iolib` |
 | PAD LEF | 수업용 PAD LEF를 바탕으로 PADVDD/PADVSS에 자기 net 가장자리 핀을 추가한 수정본 (서버에만 보관, 비공개) |
 
 ## 2. 실행 순서

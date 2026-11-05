@@ -3,7 +3,7 @@
 
 // ============================================================
 // UART V3 - PRE-LAYOUT GATE-LEVEL SIMULATION
-// Technology : GPDK045
+// Technology : 45 nm PDK
 // DUT        : uart_chip_top
 // Clock      : 1 MHz (1000 ns)
 //

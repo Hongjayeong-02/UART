@@ -1,7 +1,7 @@
 
 # ============================================================
 # UART V3 - PAD INCLUDED SYNTHESIS
-# Technology : GPDK045
+# Technology : 45 nm PDK
 # TOP        : uart_chip_top
 # Clock      : 1 MHz (1000 ns)
 # PAD        : PADDI (RX), PADDO (TX)
@@ -27,9 +27,9 @@ file mkdir $NETLIST_DIR
 # 2. Standard Cell / I/O PAD Library
 # ------------------------------------------------------------
 
-set STD_LIB "/GPDK045/digital/gsclib045_all_v4.4/gsclib045/timing/slow_vdd1v0_basicCells.lib"
+set STD_LIB "<PDK>/std/stdlib/timing/std_ss.lib"
 
-set PAD_LIB "/GPDK045/digital/giolib045_v3.5/timing/pads_SS_s1vg.lib"
+set PAD_LIB "<PDK>/io/timing/io_ss.lib"
 
 set_db library [list $STD_LIB $PAD_LIB]
 

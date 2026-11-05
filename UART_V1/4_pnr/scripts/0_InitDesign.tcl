@@ -7,11 +7,11 @@
 #         source 0_InitDesign.tcl
 ########################################
 
-set GPDK /GPDK045/digital/gsclib045_all_v4.4
+set PDK_STD <PDK>/std
 
 ## 1. Initialization
-set init_lef_file  [list $GPDK/gsclib045_tech/lef/gsclib045_tech.lef \
-                         $GPDK/gsclib045/lef/gsclib045_macro.lef]
+set init_lef_file  [list $PDK_STD/std_tech/lef/std_tech.lef \
+                         $PDK_STD/stdlib/lef/std_macro.lef]
 set init_verilog   ../SYN/netlist_1ghz_v1/uart_core_netlist.v
 set init_mmmc_file uart_core.mmmc.view
 set init_top_cell  uart_core

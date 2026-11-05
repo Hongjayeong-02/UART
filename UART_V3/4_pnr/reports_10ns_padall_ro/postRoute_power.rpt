@@ -9,8 +9,8 @@
 *	Design: uart_chip_top_allpad
 *
 *	Liberty Libraries used: 
-*	        FUNC_SS_WORST: /GPDK045/digital/gsclib045_all_v4.4/gsclib045/timing/slow_vdd1v0_basicCells.lib
-*	        FUNC_SS_WORST: /GPDK045/digital/giolib045_v3.5/timing/pads_SS_s1vg.lib
+*	        FUNC_SS_WORST: <PDK>/std/stdlib/timing/std_ss.lib
+*	        FUNC_SS_WORST: <PDK>/io/timing/io_ss.lib
 *
 *	Power Domain used: 
 *              Rail:     VDDIOR      Voltage:        0.9 

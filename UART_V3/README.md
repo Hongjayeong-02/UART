@@ -56,10 +56,10 @@ genus -files script/run_synthesis_1ghz_rsync.tcl -log syn_rsync
 innovus -nowin -log run_all.log < run_all.tcl >& console.log
 # post-layout GLS (SS SDF)
 xrun -64bit -clean -access +rwc -neg_tchk -sdf_verbose -sdf_cmd_file sdf_max.cmd -top tb_uart_v3_gls \
-     ../TESTBENCH/UART_V3/tb_uart_v3_post_gls.v ../../PNR_1GHZ/outputs/uart_apb_pnr.v <GPDK045 cell verilog> -l gls_max.log
+     ../TESTBENCH/UART_V3/tb_uart_v3_post_gls.v ../../PNR_1GHZ/outputs/uart_apb_pnr.v <PDK cell verilog> -l gls_max.log
 # gate-level regression — 최종 ⑨ QRC (SS SDF). min은 glq_min.cmd
 xrun -64bit -clean -access +r -neg_tchk -sdf_verbose -sdf_cmd_file glq_max.cmd -define NO_DUMP -top tb_uart_v3_final_gl \
-     ../TESTBENCH/UART_V3/tb_uart_v3_final_gl.v ../../PNR_1GHZ_RSYNC_QRC/outputs/uart_apb_pnr.v <GPDK045 cell verilog> -l glq_max.log
+     ../TESTBENCH/UART_V3/tb_uart_v3_final_gl.v ../../PNR_1GHZ_RSYNC_QRC/outputs/uart_apb_pnr.v <PDK cell verilog> -l glq_max.log
 # (이전 cap table flow 기록: gl_max.cmd / gl_min.cmd + PNR_1GHZ_RSYNC)
 ```
 
@@ -68,8 +68,8 @@ MCP what-if는 ChipFinish DB를 연 뒤 `set_interactive_constraint_modes [all_c
 
 ## RC 설정 (cap table flow → QRC flow)
 
-처음 MMMC의 RC corner에는 `gpdk045.tch`와 함께 28 nm용 cap table(`-cap_table ...capTbl`)이 지정돼 있었다(Innovus IMPEXT-6202 경고).
-배선 후 추출은 두 경우 모두 TQuantus + `gpdk045.tch`였지만, 배치·CTS 단계의 preRoute 추정은 cap table을 썼다.
+처음 MMMC의 RC corner에는 `qrc.tch`와 함께 28 nm용 cap table(`-cap_table ...capTbl`)이 지정돼 있었다(Innovus IMPEXT-6202 경고).
+배선 후 추출은 두 경우 모두 TQuantus + `qrc.tch`였지만, 배치·CTS 단계의 preRoute 추정은 cap table을 썼다.
 `sed -i '/-cap_table/d' uart_apb.mmmc.view`로 두 줄만 지우고 RTL·SDC·util은 그대로 재실행했다(`_QRC` 폴더). 저장소의 `uart_apb.mmmc.view`는 제거본이다.
 
 | R2R TNS (ns) | postCTS 예측 | postRoute 실제 | R2R WNS | area (µm²) |
@@ -89,4 +89,5 @@ unconstrained endpoint 19개는 모두 의도된 항목이다: `o_prdata[31:16]`
 
 10 ns · PAD · LEC 결과 요약은 저장소 루트 README의 "과제 조건 10 ns" 절.
 
-GPDK045 라이브러리(.lib/.lef/capTbl), netlist, SDF, GDS, Innovus DB는 라이선스·용량 때문에 포함하지 않는다.
+PDK 라이브러리(.lib/.lef/capTbl), netlist, SDF, GDS, Innovus DB는 라이선스·용량 때문에 포함하지 않는다.
+스크립트·리포트의 PDK 경로와 라이브러리 이름은 `<PDK>`, `stdlib`/`iolib`, `std_ss`/`std_ff`, `io_ss`/`io_ff`, `qrc.tch`로 일반화해 적었다. 서버에서 실행할 때는 실제 경로로 바꿔야 한다.
