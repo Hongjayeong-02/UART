@@ -33,3 +33,13 @@ build/
 *_pnr.v
 *.vvp
 *.pdf
+
+# More PDK / extraction / layout data (never publish)
+*.def
+*.def.gz
+*.tch
+*.capTbl
+*.captable
+*.ldb
+*.cdl
+*.gif
