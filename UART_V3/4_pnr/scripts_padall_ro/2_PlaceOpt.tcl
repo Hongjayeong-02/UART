@@ -1,47 +1,30 @@
 ########################################
-# UART V3 chip-level (ALL PAD) P&R : Placement + preCTS Opt
-# Top   : uart_chip_top_allpad
-# Input : PowerPlan
-# Run   : innovus source 2_PlaceOpt.tcl
+# Placement + preCTS Opt : uart_chip_top_allpad
 ########################################
 
 # restoreDesign PowerPlan.dat uart_chip_top_allpad
 
-## 1. Design mode
 setDesignMode -process 45
 
-## 2. Double-height(CoreSiteDouble) 
-##    45 nm PDK: (Retention/LS/ISO/Switch) + BUFX2
-##    floorplan 
-set dbl_cells {}
-foreach c [dbGet head.libCells.name -u] {
-    if {[lsearch [dbGet [dbGet head.libCells.name $c -p].site.name] CoreSiteDouble] >= 0} {
-        lappend dbl_cells $c
-    }
+## Dont Use : CoreSiteDouble cells (floorplan row is CoreSite only)
+foreach c [dbGet [dbGet head.libCells.site.name CoreSiteDouble -p2].name] {
+    setDontUse $c true
 }
-foreach c $dbl_cells { setDontUse $c true }
-puts "DONT_USE (CoreSiteDouble) : [llength $dbl_cells] cells"
-puts "DONT_USE BUFX2 : [dbGet [dbGet head.libCells.name BUFX2 -p].dontUse]"
 
-## 3. Placement
+## Placement
 placeDesign
 
-## 4. Tie cell
-if {[dbGet head.libCells.name TIEHI] != "0x0" && [dbGet head.libCells.name TIELO] != "0x0"} {
-    setTieHiLoMode -cell {TIEHI TIELO} -maxFanout 8
-    addTieHiLo
-    puts "TIE CELL : inserted"
-} else {
-    puts "TIE CELL : TIEHI/TIELO not found, skipped"
-}
+## Tie Cell
+setTieHiLoMode -cell {TIEHI TIELO} -maxFanout 8
+addTieHiLo
 
-## 5. preCTS optimization (setup)
+## preCTS Opt
 optDesign -preCTS -outDir reports/preCTS_opt
 
-## 6. Check & report
+## Verify
 checkPlace uart_chip_top_allpad.checkPlace.rpt
 timeDesign -preCTS -outDir reports/preCTS -prefix preCTS
 report_area > reports/preCTS_area.rpt
 
-## 7. Save
+## Save Design
 saveDesign PlaceOpt

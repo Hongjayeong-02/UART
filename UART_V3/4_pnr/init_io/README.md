@@ -1,5 +1,7 @@
 # UART V3 PADALL RO — Init + IO (P&R 준비 단계)
 
+> 최신 기록 (2026-11-06 정리본, IO 배치 이슈 포함): [init_io_1106.md](init_io_1106.md)
+
 UART V3 칩 레벨 top `uart_chip_top_allpad`(모든 외부 포트에 PAD)를 Innovus에서 **Init → Floorplan → IO 배치 → IO filler**까지 진행한 결과입니다.
 최종 P&R(`PNR_10NS_PADALL_RO`, 리포트는 `../reports_10ns_padall_ro/`)에서 쓴 스크립트와 IO 파일을 그대로 사용해, 새 폴더(`PNR_10NS_PADALL_RO_INITIO`)에서 Init + IO만 다시 실행했습니다.
 
@@ -19,7 +21,7 @@ UART V3 칩 레벨 top `uart_chip_top_allpad`(모든 외부 포트에 PAD)를 In
 ## 2. 실행 순서
 
 ```tcl
-source 0_InitDesign.tcl      ;# init_design -> floorPlan -> io 파일 생성 -> loadIoFile -> respace.tcl -> addIoFiller -> saveDesign InitDesign
+source 0_InitDesign.tcl      ;# init_design -> floorPlan -> loadIoFile uart_padall.io -> respace.tcl -> addIoFiller -> saveDesign InitDesign
 checkDesign -all -outdir checkDesign
 checkFPlan -outFile checkFPlan.rpt
 timeDesign -prePlace -outDir reports/prePlace -prefix prePlace
@@ -28,7 +30,7 @@ timeDesign -prePlace -outDir reports/prePlace -prefix prePlace
 | 단계 | 내용 |
 |---|---|
 | Floorplan | `floorPlan -site CoreSite -d 1892 1900 30 30 30 30` (PAD 안쪽 30 µm는 core power ring 채널) |
-| IO 파일 | `0_InitDesign.tcl`이 netlist의 PAD 인스턴스 이름(PADDI/PADDO)을 읽어 `uart_padall.io`를 생성 |
+| IO 파일 | `uart_padall.io` (netlist의 PAD 인스턴스 기준으로 작성. 2026-11-06부터 `0_InitDesign.tcl`은 읽기만 함) |
 | IO 간격 | `respace.tcl`: 좌우 변 PAD 사이 간격을 정수 µm로 다시 배분 (1 µm IO filler로 빈틈없이 채우기 위해) |
 | IO filler | `addIoFiller` (FEED60/10/5/3/1) |
 
@@ -92,7 +94,7 @@ prePlace slack이 합성 결과(I2R +3.748 ns, R2R +7.747 ns)와 거의 같으�
 
 | 파일 | 내용 |
 |---|---|
-| `0_InitDesign.tcl` | Init, floorplan, IO 파일 생성/로드, IO filler |
+| `0_InitDesign.tcl` | Init, floorplan, IO 파일 로드, IO filler |
 | `respace.tcl` | 좌우 변 PAD 간격 정수화 |
 | `uart_padall.io` | IO 배치 파일 |
 | `initio_check.tcl` | 이 폴더의 확인 스크립트 (checkDesign, checkFPlan, prePlace timing, 캡처) |
