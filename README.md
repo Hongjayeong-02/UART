@@ -56,13 +56,13 @@
 |---|---|---|---|
 | SDC | `uart_v3_10ns.sdc` (period 10 ns, I/O delay **40 %**) | `uart_v3_10ns_pad.sdc` (위 + 입력 `set_input_transition 0.5`) | B와 같음 |
 | 합성 I2O / I2R / R2O / R2R (ps) | +758 / +4,276 / +4,906 / +7,709 | −82 / +3,846 / +4,099 / +7,785 | **No paths** / +3,748 / +4,404 / +7,747 |
-| **post-route setup WNS** | **+0.367 ns** (위반 0) | −0.321 ns (17 paths, 모두 I2O) | **+3.128 ns** (위반 0) |
-| **post-route hold WNS** | **+0.002 ns** (위반 0) | +0.021 ns (위반 0) | **+0.020 ns** (위반 0) |
+| **post-route setup WNS** | **+0.367 ns** (위반 0) | −0.321 ns (17 paths, 모두 I2O) | **+3.255 ns** (위반 0) |
+| **post-route hold WNS** | **+0.002 ns** (위반 0) | +0.021 ns (위반 0) | **+0.012 ns** (위반 0) |
 | DRC · Conn | 0 · 0 | 0 · 28 (pad ring, 아래) | 0 · 8 info (IO ring 전원 abutment 2, corner 경계 레일 6) |
-| 면적 (`report_area`) | **3,716.5 µm²** (1,046 inst, hold buffer 17개) | 1,185,575 µm² (대부분 pad, density 0.258 %) | 1,185,282 µm² (1,432 inst, `uart_apb` 4,270 µm², density 0.244 %) |
-| **gate-level regression** (최종 netlist + SDF) | **33/33** × SS/FF × TB clock **100 MHz(at-speed)** / 48 MHz, RTL과 diff 0, timing violation 0 | — | — |
-| **Conformal LEC** RTL ⑨ ↔ 합성 netlist | **PASS** · Equivalent 368 (PO 36 + DFF 332) · Non-eq 0 · Abort 0 | — | — |
-| **Conformal LEC** 합성 netlist ↔ P&R netlist (최종) | **PASS** · Equivalent 368 · Non-eq 0 · Abort 0 · unmapped 0 | — | — |
+| 면적 (`report_area`) | **3,716.5 µm²** (1,046 inst, hold buffer 17개) | 1,185,575 µm² (대부분 pad, density 0.258 %) | `u_uart_apb` **3,929.9 µm²** (1,079 inst, hold buffer 45) |
+| **gate-level regression** (최종 netlist + SDF) | **33/33** × SS/FF × TB clock **100 MHz(at-speed)** / 48 MHz, RTL과 diff 0, timing violation 0 | — | **33/33** × SS/FF × 100 / 48 MHz, RTL과 동일, SDFINF 0 (hier netlist) |
+| **Conformal LEC** RTL ⑨ ↔ 합성 netlist | **PASS** · Equivalent 368 (PO 36 + DFF 332) · Non-eq 0 · Abort 0 | — | **PASS** · Equivalent 386 (칩 단위) |
+| **Conformal LEC** 합성 netlist ↔ P&R netlist (최종) | **PASS** · Equivalent 368 · Non-eq 0 · Abort 0 · unmapped 0 | — | **PASS** · Equivalent 386 · unmapped 0 · black box 0 |
 
 | | V1 | V2 | **V3 ⑨** |
 |---|---|---|---|
@@ -76,7 +76,8 @@ V1 · V2 · V3 모두 같은 10 ns SDC와 P&R 스크립트다. V3만 rst_n false
 - **I/O 40 %**: 60 %면 입력 + 출력 delay가 12 ns > 10 ns라 I2O 경로(`i_paddr → o_prdata`)는 clock과 무관하게 불가능하다(합성 −2,702 ps). 40 %에서 +758 ps.
 - **PAD top SDC**: 블록용 `set_driving_cell BUFX2`를 그대로 쓰면 BUFX2가 PADDI의 PAD 핀(≈ 2.4 pF)을 구동하는 가정이 돼 transition 29.7 ns, I2R −29.6 ns의 가짜 위반이 생긴다. PAD top 전용 SDC에서 `set_input_transition 0.5`(가정값)로 바꿨다.
 - **B setup −0.321 ns**: PADDI(604 ps) + PADDO(932 ps)가 칩 안 예산을 차지하고, die 1.9 mm라 pad ↔ core 배선이 길다. 통과시키려고 예산을 줄이지 않았다. → 설계를 바꿔(RO) 해결.
-- **RO (read-optimized `uart_apb`)**: B의 I2O 위반은 PRDATA/PREADY가 PADDR에서 조합으로 나오는 구조 때문이다. read 응답을 플롭 출력으로 바꾸고(read +1 wait, write zero-wait) 입력 PAD → 출력 PAD 조합 경로를 없앴다(합성 I2O "No paths"). 근거: `UART_V3/3_syn/README_10ns_padall_ro.md`, P&R 리포트 `UART_V3/4_pnr/reports_10ns_padall_ro/`, P&R 준비(Init+IO) `UART_V3/4_pnr/init_io/README.md`. RO의 gate-level regression과 LEC 결과는 이 표에 넣지 않았다.
+- **RO (read-optimized `uart_apb`)**: B의 I2O 위반은 PRDATA/PREADY가 PADDR에서 조합으로 나오는 구조 때문이다. read 응답을 플롭 출력으로 바꾸고(read +1 wait, write zero-wait) 입력 PAD → 출력 PAD 조합 경로를 없앴다(합성 I2O "No paths"). 근거: `UART_V3/3_syn/README_10ns_padall_ro.md`, P&R 리포트 `UART_V3/4_pnr/reports_10ns_padall_ro/`, P&R 준비(Init+IO) `UART_V3/4_pnr/init_io/README.md`, GLS `UART_V3/5_gls/ro_gls_results.txt`.
+- **RO 재실행 (2026-11-06)**: 0~5 스크립트를 교재 형식으로 정리하고 hold 목표를 +20 → +5 ps로 맞춰 다시 돌렸다(이전 결과는 `reports_10ns_padall_ro_h20/`: setup +3.128 ns, hold +20 ps, hold buffer 229, `u_uart_apb` 4,270.0 µm²). 정리 중 IO 파일을 `floorPlan` 전에 읽게 바꾸자 전원 pad 2개가 core 경계로 밀려 겹쳤고, timing·DRC는 깨끗했지만 checkPlace에서만 드러났다 → `floorPlan` 뒤 `loadIoFile`로 되돌림. 기록: `UART_V3/4_pnr/init_io/init_io_1106.md`.
 - **pad 보존**: 안 쓰는·상수 포트의 pad가 합성에서 지워지지 않도록 elaborate 직후 PADDI/PADDO에 `preserve`(82/82 유지).
 - **B 전원**: `iolib_modify.lef`(PADVDD/PADVSS `CLASS PAD AREAIO`)로 sroute가 전원 pad 4개를 core ring에 연결. 남은 Conn 28건은 IO ring 구간이며 pad LEF에 ring 모양이 없어 연속성을 증명할 수 없다 → **칩 레벨 전원 무결성은 미검증**.
 - **hold**: 1차 run의 위반 3개 중 2개는 `rst_n → r_rstSync_reg[0/1]/RN` removal. 10 ns P&R SDC에는 `set_ideal_network rst_n`이 있어 hold 수정이 "IPO ignored"로 건너뛰었다(1 GHz P&R SDC에는 이 줄이 없음). reset synchronizer 첫 단은 비동기 해제를 전제로 한 회로라 `set_false_path -from [get_ports rst_n]`(V3·B만, V1/V2는 rst_n이 모든 flop에 가므로 적용 안 함). 나머지 1개(−4 ps)는 `setOptMode -holdTargetSlack`(최종 0.005)로 해결.
@@ -90,6 +91,18 @@ V1 · V2 · V3 모두 같은 10 ns SDC와 P&R 스크립트다. V3만 rst_n false
   | setup WNS | +0.370 ns | **+0.367 ns** | +0.385 ns |
 
   min input delay 0인 입력 → FF 경로 대부분이 hold 여유 0~20 ps라, +20 ps 목표는 buffer 170개(+8.3 % 면적)를 더 써서 여유 4 ps를 산 셈이다.
+  hold 목표는 SDC의 hold uncertainty 50 ps **위에** 더해지므로, +20 ps면 실제 요구 margin이 약 70 ps가 된다. 그래서 margin은 SDC에서 관리하고 tool 목표는 +5 ps로 정했다.
+  PAD top RO도 같은 비교: +20 → +5 ps에서 hold buffer 229 → 45, `u_uart_apb` 4,270.0 → 3,929.9 µm²(−8.0 %), hold WNS +20 → +12 ps. 칩 레벨에서는 입력 PAD 지연이 더해져 블록의 I/O hold 병목(min input delay 0)이 사라진다.
+- **Floorplan sweep (V3 블록, 기준은 util 0.6 유지)**: 같은 netlist로 util / core margin만 바꿨다. 결과: `UART_V4/4_pnr/floorplan_sweep/sweep_v3.txt`.
+
+  | util / margin | die (µm²) | setup / hold WNS | 위반 | 비고 |
+  |---|---|---|---|---|
+  | 0.60 / 15 µm (기준) | 11,330 | +0.367 ns / +2 ps | 0 | |
+  | 0.70 / 10 µm | 8,244 (−27 %) | +0.339 ns / +6 ps | 0 | pin 간격 1 µm |
+  | 0.80 / 10 µm | 7,438 (−34 %) | +0.552 ns / +3 ps | 0 | pin 간격 1 µm |
+  | 0.90 / 10 µm | 6,797 (−40 %) | +0.372 ns / −28 ps | hold 22 | 실제 density 95 %, hold buffer 넣을 자리 없음 |
+
+  pin 간격 2 µm 그대로 0.70 이상으로 조이면 한쪽 변 pin 45개가 다 들어가지 않아 `clk`, `i_pwdata[0]` pin이 **배치되지 않았고**, setup·DRC·checkPlace는 통과로 보였다(증상은 I/O hold 위반뿐, 로그 `IMPOPT-576`). 0.80까지 줄일 수 있지만 발표·검증이 끝난 기준(0.6)은 그대로 두고 근거 자료로만 남긴다.
 - **LEC**: 1차는 FAIL(Non-eq 2, Not-mapped 1). Genus가 항상 반대 값인 `o_txReady`를 `~o_txBusy`로 sequential merge한 것이 원인. `set analyze option -auto`로 merge를 모델링해 PASS, `o_txReady`는 Inverted-equivalent. Unreachable 2(`uut_rx` `o_falseStart`, `o_rxBusy`: 상위에서 안 쓰는 출력). 합성 netlist ↔ P&R netlist(CTS · hold buffer 17개 포함)도 PASS(368 Equivalent, unmapped 0) → **RTL → 합성 → P&R 전 구간 동등성 확인**.
 - 서버 `**ERROR` 25건은 OpenAccess 라이브러리 없음(17) · MS constraint 저장(6) · scan chain 미정의(2)로, 1 GHz run과 같은 환경 메시지다.
 

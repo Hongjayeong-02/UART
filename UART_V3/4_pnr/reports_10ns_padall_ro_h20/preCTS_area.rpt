@@ -1,0 +1,4 @@
+    Hinst Name       Module Name                                              Inst Count           Total Area
+----------------------------------------------------------------------------------------------------------
+uart_chip_top_allpad                                                                1185          1184653.656
+  u_uart_apb         uart_apb_STRICT_APB_ERR1h0_TX_FIFO_DEPTH8_RX_FIFO_DEPTH8       1047             3756.528

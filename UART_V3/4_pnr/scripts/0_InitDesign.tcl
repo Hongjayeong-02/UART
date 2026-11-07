@@ -3,7 +3,7 @@
 # Top   : uart_apb (PAD 없음)
 # Clock : 1 GHz (MMMC: uart_apb_1ghz_pnr.sdc). 처음 1 MHz flow에서 작성한 뒤 1 GHz run에 그대로 사용
 # Mode  : Innovus legacy (no -stylus)
-# Run   : cd /home/hah006/PROJ1/proj1_make/TOP/PNR
+# Run   : cd ~/PROJ1/proj1_make/TOP/PNR
 #         innovus -nowin -log InitDesign
 #         source 0_InitDesign.tcl
 ########################################

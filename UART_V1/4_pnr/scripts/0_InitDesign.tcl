@@ -2,7 +2,7 @@
 # UART V1 Block-level P&R : InitDesign
 # Top   : uart_core (PAD 없음, 1 GHz — SDC는 MMMC에서 지정)
 # Mode  : Innovus legacy (no -stylus)
-# Run   : cd /home/hah006/PROJ1/proj1_make/TOP/PNR
+# Run   : cd ~/PROJ1/proj1_make/TOP/PNR
 #         innovus -nowin -log InitDesign
 #         source 0_InitDesign.tcl
 ########################################

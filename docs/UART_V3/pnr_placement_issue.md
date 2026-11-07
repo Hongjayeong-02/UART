@@ -115,7 +115,7 @@ dbGet [dbGet head.libCells.name BUFX3 -p].site.name
 
 ```bash
 grep -RniE 'techSites|checkPlace|CoreSiteDouble|BUFX2' \
-    /home/hah006/PROJ1/proj1_make/TOP/PNR/ 2>/dev/null
+    ~/PROJ1/proj1_make/TOP/PNR/ 2>/dev/null
 ```
 
 

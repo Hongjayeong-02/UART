@@ -46,7 +46,7 @@ LEC는 시뮬레이션처럼 입력 벡터에 의존하지 않는다. 모든 com
 |---|---|
 | 작업 서버 | hah006 (작성) |
 | LEC 실행 서버 | hitech001 (수업 시간에만 사용 가능) |
-| 원본 경로 | `/home/hah006/PROJ1/proj1_make/TOP/EC/script/run_lec.do` |
+| 원본 경로 | `~/PROJ1/proj1_make/TOP/EC/script/run_lec.do` |
 | 실행 디렉터리 | `.../TOP/EC/` (dofile 안의 상대경로 `../SYN/...`, `./log/` 기준) |
 
 ## 3. 수업 전 체크리스트 (hah006에서 미리)

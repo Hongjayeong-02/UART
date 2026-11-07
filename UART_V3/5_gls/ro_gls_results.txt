@@ -1,0 +1,18 @@
+# V3 PADALL RO post-layout GLS (2026-11-06 P&R, hier netlist + SDF), summarized from logs
+
+ro_max_100 : PASS 33 / FAIL 0
+    	Annotation completed with 0 Errors and 198 Warnings | SDFINF 0 | *E, 0
+    warnings:     198  *W,SDFNET       1  *W,TMTPAR (tb_ro_100m.v,1057|18) 
+    timing violations: 0
+ro_max_48 : PASS 33 / FAIL 0
+    	Annotation completed with 0 Errors and 198 Warnings | SDFINF 0 | *E, 0
+    warnings:     198  *W,SDFNET       1  *W,TMTPAR (tb_ro_48m.v,1057|18) 
+    timing violations: 0
+ro_min_100 : PASS 33 / FAIL 0
+    	Annotation completed with 0 Errors and 242 Warnings | SDFINF 0 | *E, 0
+    warnings:      44  *W,SDFNDP     198  *W,SDFNET       1  *W,TMTPAR (tb_ro_100m.v,1057|18) 
+    timing violations: 0
+ro_min_48 : PASS 33 / FAIL 0
+    	Annotation completed with 0 Errors and 242 Warnings | SDFINF 0 | *E, 0
+    warnings:      44  *W,SDFNDP     198  *W,SDFNET       1  *W,TMTPAR (tb_ro_48m.v,1057|18) 
+    timing violations: 0

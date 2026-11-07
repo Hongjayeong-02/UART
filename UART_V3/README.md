@@ -15,7 +15,7 @@ even/odd parity, 1/2 stop bit, RX data / parity·frame error / overflow interrup
 | `2_tb/` | `tb_uart_v3_final.v`(regression 33 checks), `tb_uart_v3_final_gl.v`(같은 33 checks, 내부 신호 참조 없음 → gate-level용), `mcp_checker.sv`(MCP 근거 assertion), GLS·PAD TB |
 | `3_syn/` | 1 GHz SDC(`cons/`), Genus 스크립트(`script/`), 핵심 리포트(④ `opt4`, ⑦ `pipe7`, ⑧ `rxp8`, ⑨ `rsync9`, 계층 유지 `hier`) · **10 ns**: `uart_v3_10ns.sdc`, `uart_v3_10ns_pad.sdc`, `run_synthesis_10ns_{rsync,pad2,padall}.tcl`, `reports/10ns_*` |
 | `4_pnr/` | Innovus 스크립트 0~5, MMMC(cap table 제거본), P&R SDC, sweep 스크립트, MCP what-if(`scripts/mcp_whatif.tcl`), 리포트(**최종 ⑨ QRC `reports_rsync9_qrc/`**, ⑦ QRC `reports_pipe7_qrc/`, cap table flow: ⑦ `reports_pipe7/`, ⑧ `reports_rxp8/`, ⑨ `reports_rsync9/`) |
-| `4_pnr/` (PADALL RO) | `scripts_padall_ro/`, `reports_10ns_padall_ro/` (최종 칩 레벨 P&R), **`init_io/`** (Init → floorplan → IO 배치 → IO filler, `init_io/README.md`) |
+| `4_pnr/` (PADALL RO) | `scripts_padall_ro/`, `reports_10ns_padall_ro/` (최종 칩 레벨 P&R, 2026-11-06 재실행 · hold 목표 +5 ps), `reports_10ns_padall_ro_h20/` (이전 +20 ps 결과), **`init_io/`** (Init → floorplan → IO 배치 → IO filler, `init_io/README.md`, `init_io_1106.md`) |
 | `4_pnr/` (10 ns) | `scripts_10ns/`(V3: 바뀐 파일만 · rst_n false path SDC · hold 목표 +5 ps, 2차는 +20 ps), `scripts_padall/`(PAD top 전체 flow, IO 파일 생성 · modify LEF), **`reports_10ns_v3_h5/` (최종, hold 목표 +5 ps)**, `reports_10ns_v3/` (2차 +20 ps, `run1/` = 1차), `reports_10ns_padall/` (`run1/` = 1차) |
 | `5_gls/` | post-layout GLS용 SDF 설정 (smoke: max / min / recrem split, gate-level regression: `gl_max` / `gl_min`, ⑨ QRC: `glq_max` / `glq_min`, **10 ns 최종: `g10_{max,min}_{100,48}.cmd`**) · `gl10.sh`(10 ns GL 실행 스크립트) |
 | `6_verify/` | `read_opt/`: V3 ↔ RO 같은 APB 시퀀스 비교 TB · regression 결과(`regression/*_pf.txt`), 동등성 비교 TB(`equivalence/`), 면적 합산 `area.awk`, **Conformal LEC**(`lec/`: RTL↔합성 `run_lec*.do`, 합성↔P&R `run_lec_pnr.do`, console 로그) |
@@ -85,7 +85,7 @@ cap table flow는 배선 전 예측이 비관적이라 셀이 과하게 upsizing
 
 unconstrained endpoint 19개는 모두 의도된 항목이다: `o_prdata[31:16]` 16개 · `o_pslverr`(TIELO 상수 출력), `o_uartTx`(false path), `r_rstSync_reg[0]/D`(상수 1 입력). 그 밖에 `clk` no drive, `i_uartRx` no input delay(false path). 전체 최악 경로는 `i_paddr[2] → o_prdata[6]`(APB 읽기 입력 → 출력 조합 경로, `worst_all.rpt`).
 
-`5_gls/*.cmd`의 `SDF_FILE`은 학교 서버의 절대 경로(`/home/hah006/...`)다. 다른 환경에서는 SDF 경로를 바꿔야 한다.
+`5_gls/*.cmd`의 `SDF_FILE`은 학교 서버의 절대 경로(`<TOP>/...`)다. 다른 환경에서는 SDF 경로를 바꿔야 한다.
 
 10 ns · PAD · LEC 결과 요약은 저장소 루트 README의 "과제 조건 10 ns" 절.
 
