@@ -7,6 +7,7 @@
 | V1 | UART core (baud gen, TX, RX), loopback TB · 1 GHz / 10 ns 합성·P&R(V3와 같은 flow) | [`UART_V1/`](UART_V1) |
 | V2 | APB register, TX/RX FIFO, interrupt, 모듈별 TB · 1 GHz / 10 ns 합성·P&R(V3와 같은 flow) | [`UART_V2/`](UART_V2) |
 | **V3** | APB3 peripheral IP, 1 GHz 합성·RTL 최적화·P&R·post-layout GLS · **10 ns 과제 P&R · PAD top · LEC** | [`UART_V3/`](UART_V3) |
+| **V4** | PCLK / UART_CLK 비동기 dual-clock APB UART (async FIFO 16, 설정 handshake, registered PSLVERR) · 10 ns 합성 · P&R · LEC · post-layout GLS · floorplan sweep | [`UART_V4/`](UART_V4) |
 
 ### V1 · V2 · V3 공통 방법론 비교 (post-route, 1 GHz 목표)
 

@@ -1,0 +1,15 @@
+# RTL simulation results (Xcelium), summarized from logs
+
+apbcdc                 PASS   35  FAIL   0  | APB_CDC ALL PASS  pHalf=5.00 uHalf=7.30
+apbcdc_slowp           PASS   35  FAIL   0  | APB_CDC ALL PASS  pHalf=37.00 uHalf=5.30
+baud                   PASS    9  FAIL   0  | BAUD_GEN ALL PASS
+cfg                    PASS   14  FAIL   0  | CFG_CDC ALL PASS  accepted=55 refused=23 pHalf=5.00 uHalf=13.10 seed=1
+core                   PASS   16  FAIL   0  | CORE ALL PASS  rxEntries=134 overflow=5 pHalf=5.00 uHalf=7.30 seed=1
+core_slowu             PASS   16  FAIL   0  | CORE ALL PASS  rxEntries=134 overflow=5 pHalf=5.00 uHalf=21.00 seed=4
+fifo                   PASS    8  FAIL   0  | ASYNC_FIFO ALL PASS  accepted=4024 maxOcc=16 wHalf=5.00 rHalf=7.30 see
+fifo_slowR             PASS    8  FAIL   0  | ASYNC_FIFO ALL PASS  accepted=4024 maxOcc=16 wHalf=5.00 rHalf=31.00 se
+fifo_slowW             PASS    8  FAIL   0  | ASYNC_FIFO ALL PASS  accepted=4024 maxOcc=16 wHalf=31.00 rHalf=5.00 se
+status_sync            PASS    8  FAIL   0  | STATUS_SYNC ALL PASS  events=417 pulses=288 sHalf=5.00 dHalf=13.10 see
+status_sync_slowsrc    PASS    8  FAIL   0  | STATUS_SYNC ALL PASS  events=469 pulses=434 sHalf=41.00 dHalf=5.00 see
+v3reg_same             PASS   33  FAIL   0  |  UART V3 FINAL REGRESSION: ALL PASS
+v3reg_sep              PASS   33  FAIL   0  |  UART V3 FINAL REGRESSION: ALL PASS

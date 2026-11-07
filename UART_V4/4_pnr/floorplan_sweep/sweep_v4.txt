@@ -1,0 +1,33 @@
+cfg            die(um)           die um2   cell% setupWNS  holdWNS   viol FEPHC   DRC  chkPl  unplT
+u60_m15        130.4x127.5         16626    37.7    3.624    0.005    0/0    35     0      0      0
+u70_m10        112.6x110.8         12476    50.2    3.685    0.005    0/0    36     0      0      0
+u80_m10        105.8x105.6         11172    56.1    3.689    0.006    0/0    42     0      0      0
+u90_m10        101.2x100.5         10171    61.1    3.644   -0.011   0/10     0     0      0      0
+
+== summaryReport (wire length, utilization)
+--- pnr_sw_u60_m15
+% Pure Gate Density #1 (Subtracting BLOCKAGES): 100.000%  
+% Pure Gate Density #2 (Subtracting BLOCKAGES and Physical Cells): 64.004%  
+% Pure Gate Density #3 (Subtracting MACROS): 100.000%  
+% Pure Gate Density #4 (Subtracting MACROS and Physical Cells): 64.004%  
+--- pnr_sw_u70_m10
+% Pure Gate Density #1 (Subtracting BLOCKAGES): 100.000%  
+% Pure Gate Density #2 (Subtracting BLOCKAGES and Physical Cells): 74.567%  
+% Pure Gate Density #3 (Subtracting MACROS): 100.000%  
+% Pure Gate Density #4 (Subtracting MACROS and Physical Cells): 74.567%  
+--- pnr_sw_u80_m10
+% Pure Gate Density #1 (Subtracting BLOCKAGES): 100.000%  
+% Pure Gate Density #2 (Subtracting BLOCKAGES and Physical Cells): 85.506%  
+% Pure Gate Density #3 (Subtracting MACROS): 100.000%  
+% Pure Gate Density #4 (Subtracting MACROS and Physical Cells): 85.506%  
+--- pnr_sw_u90_m10
+% Pure Gate Density #1 (Subtracting BLOCKAGES): 100.000%  
+% Pure Gate Density #2 (Subtracting BLOCKAGES and Physical Cells): 95.163%  
+% Pure Gate Density #3 (Subtracting MACROS): 100.000%  
+% Pure Gate Density #4 (Subtracting MACROS and Physical Cells): 95.163%  
+
+== V4 CDC worst slack (p2u / u2p)
+pnr_sw_u60_m15: 8.667 / 8.513
+pnr_sw_u70_m10: 8.701 / 8.568
+pnr_sw_u80_m10: 8.738 / 8.525
+pnr_sw_u90_m10: 8.471 / 8.477

@@ -1,0 +1,27 @@
+== 1st-stage synchronizer flops (FIFO_AW=4 -> 5-bit pointers)
+register                            found   expect
+r_reqSync1 (cfg 1 + event 3)            4        4
+r_ackSync1 (cfg 1 + event 3)            4        4
+r_wGraySync1 (TX 5 + RX 5)             10       10
+r_rGraySync1 (TX 5 + RX 5)             10       10
+r_doneSync1 (TX done counter)           5        5
+r_rxMeta (RX pin)                       1        1
+r_sync (reset sync, 2 x 2)              4        4
+== 2nd stages
+r_reqSync2 / r_ackSync2                 8        8
+r_wGraySync2 / r_rGraySync2            20       20
+r_doneSync2                             5        5
+r_rxSync                                1        1
+(a count lower than expected means a synchronizer flop was removed or merged)
+
+== latches (expect 0)
+0
+
+== CDC paths: slack summary (set_max_delay 10 ns)
+report_10ns/cdc_p2u.rpt : paths=46 negative=0   first:                 Slack:=    9110                  
+report_10ns/cdc_u2p.rpt : paths=29 negative=0   first:                 Slack:=    8940                  
+
+== I2O / PSLVERR
+Path 1: MET (5524 ps) Late External Delay Assertion at pin o_pslverr
+     Startpoint: (R) r_pslverr_reg/CK
+       Endpoint: (R) o_pslverr

@@ -1,0 +1,24 @@
+# V4 post-layout GLS (P&R u80_m10 netlist + SDF), summarized from logs
+
+gl_max_slowp : PASS 25 / FAIL 0 | APB_CDC ALL PASS  pHalf=37.00 uHalf=10.42
+    	Annotation completed with 0 Errors and 305 Warnings | SDFINF 0 | *E, 0
+    warnings:     305  *W,SDFNET 
+    timing violations 16 (synchronizer 1st stage 0, other 16)
+      at      16 posedge CK:472047055
+gl_max_spec : PASS 25 / FAIL 0 | APB_CDC ALL PASS  pHalf=5.00 uHalf=10.42
+    	Annotation completed with 0 Errors and 305 Warnings | SDFINF 0 | *E, 0
+    warnings:     305  *W,SDFNET 
+    timing violations 3 (synchronizer 1st stage 3, other 0)
+      at       1 posedge CK:532715663
+      at       1 posedge CK:588405290
+      at       1 posedge CK:644865290
+gl_min_slowp : PASS 25 / FAIL 0 | APB_CDC ALL PASS  pHalf=37.00 uHalf=10.42
+    	Annotation completed with 0 Errors and 305 Warnings | SDFINF 0 | *E, 0
+    warnings:      38  *W,SDFNDP     305  *W,SDFNET 
+    timing violations 0 (synchronizer 1st stage 0, other 0)
+gl_min_spec : PASS 25 / FAIL 0 | APB_CDC ALL PASS  pHalf=5.00 uHalf=10.42
+    	Annotation completed with 0 Errors and 305 Warnings | SDFINF 0 | *E, 0
+    warnings:      38  *W,SDFNDP     305  *W,SDFNET 
+    timing violations 0 (synchronizer 1st stage 0, other 0)
+
+other = reset assert near a UART_CLK edge (all on reset flops DFFR/SDFFR), see cdc_spec.md step 9
