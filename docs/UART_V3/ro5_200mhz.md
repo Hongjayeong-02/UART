@@ -48,7 +48,7 @@ SDC는 `uart_v3_10ns_pad.sdc`에서 `PERIOD 10.0 → 5.0`, waveform `{0 5} → {
 | setup WNS (all / reg2reg) | +3.255 ns / — | **+0.226 ns / +2.659 ns**, 위반 0 |
 | hold WNS | +0.012 ns | **+0.012 ns**, 위반 0 |
 | DRC | 0 | 0 |
-| Conn | 위반 0 (info 8) | 위반 0 |
+| Conn | info 8 | info 8 (10 ns RO와 내용 동일: VDD·VSS ring open 6, VDDIOR·VSSIOR 배선 없음 2 → 칩 레벨 전원 무결성 미검증) |
 | `u_uart_apb` (`report_area`) | 3,929.9 µm² / 1,079 inst | **3,940.9 µm² / 1,104 inst (+0.3 %)** |
 | 칩 전체 | — | 1,184,937 µm² / 1,271 inst (대부분 PAD, density 0.225 %) |
 | ERROR (OpenAccess 환경 메시지 제외) | — | 0 |

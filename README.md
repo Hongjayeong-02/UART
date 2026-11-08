@@ -52,7 +52,7 @@
 
 ## 발표 최종 · 5 ns (200 MHz) PAD top RO + BAUDDIV 수정
 
-> **chip-level (`uart_chip_top_allpad`, 82 pad) · setup +0.226 ns · hold +0.012 ns · 위반 0 · DRC 0 · Conn 0**
+> **chip-level (`uart_chip_top_allpad`, 82 pad) · setup +0.226 ns · hold +0.012 ns · 위반 0 · DRC 0** · Conn: 10 ns RO와 같은 info 8건(IO ring 전원), 칩 레벨 전원 무결성은 미검증
 > gate-level 33/33 × SS/FF × TB clock **200 MHz(at-speed)** / 48 MHz · LEC RTL→합성 · 합성→P&R PASS (386)
 
 아래 10 ns PAD top RO와 같은 RTL 구조·P&R 스크립트에서 clock만 5 ns로 줄이고(I/O delay는 같은 40 % 규칙 → 2 ns), BAUDDIV 버그를 `>=` 한 글자로 고쳤다(추가 플롭 0, BAUDDIV 고정 시 ⑨와 동일 — lockstep 확인).
