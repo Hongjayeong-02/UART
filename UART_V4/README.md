@@ -20,8 +20,9 @@ V3 UART를 **APB 클럭(PCLK)과 UART 클럭(UART_CLK)이 완전히 비동기**�
 
 | 단계 | 결과 |
 |---|---|
-| RTL 시뮬레이션 | V3 regression (같은 / 분리된 clock) 34 + 34, APB CDC TB 2개 clock 비율 × 35 checks, 단위 TB 5종 PASS ([`2_tb/sim_results.txt`](2_tb/sim_results.txt)) |
+| RTL 시뮬레이션 | V3 regression (같은 / 분리된 clock) 34 + 34, APB CDC TB 2개 clock 비율 × STRICT_APB_ERR 0·1 × 44 (P11 포함), 단위 TB 5종 PASS ([`2_tb/sim_results.txt`](2_tb/sim_results.txt)) |
 | SETUP/ACCESS 경계 | P10: CFG_BUSY가 SETUP 끝 edge에서는 1, ACCESS에서는 0인 cycle을 찾아 쓰기 → 거절 확인. 수정 전 RTL에서는 FAIL (구분력 확인) |
+| TX FIFO full | P11: 느린 TX에 연속 쓰기 → 17개 수락 후 거절, PSLVERR는 STRICT일 때 거절된 쓰기에만 1. full이 SETUP 끝 edge에서 1, ACCESS에서 0인 cycle에 쓰기 → STRICT=0 수락 / STRICT=1 거절(SETUP 결정)로 PSLVERR와 실제 수락 여부가 항상 일치. 수락된 byte만 loopback으로 순서대로 한 번씩 돌아옴. ACCESS full 검사나 SETUP 결정을 뺀 RTL에서는 FAIL (구분력 확인) |
 | 합성 (Genus) | 위반 0, I2O 경로 없음, latch 0, CDC `set_max_delay 10 ns` worst 9.110 / 8.940 ns |
 | Synchronizer 구조 | 1단 flop 34개 모두 같은 비트 2단 D에 직결, 사이 로직·fanout 없음 ([`check_sync_path.py`](3_syn/script/check_sync_path.py)) |
 | LEC (Conformal) | RTL ↔ 합성 PASS (Equivalent 629, Unreachable 19 = 상수 상위 read data 16 + 미사용 출력 3), 합성 ↔ P&R PASS (629, unmapped 0) |

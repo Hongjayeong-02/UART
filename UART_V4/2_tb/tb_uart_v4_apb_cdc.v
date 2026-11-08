@@ -20,6 +20,17 @@
 //   P10 SETUP/ACCESS boundary (D24): CFG_BUSY is 1 at the edge that ends SETUP
 //      and 0 during ACCESS. The write is still refused (decided in SETUP),
 //      PSLVERR=1, and the register keeps the value accepted before
+//   P11 TX FIFO full (RTL only, internal probes):
+//      a) back-to-back TXDATA burst into a slow TX: the FIFO fills, later
+//         writes are refused; PSLVERR = STRICT_APB_ERR exactly on the refused
+//         ones; accepted count = depth (+ bytes already popped by TX)
+//      b) SETUP/ACCESS boundary: full = 1 at the SETUP-ending edge, 0 during
+//         ACCESS (TX popped a byte). STRICT=0: accepted, PSLVERR=0.
+//         STRICT=1: refused (decided in SETUP), PSLVERR=1. Never accepted
+//         with PSLVERR=1, never refused with PSLVERR=0 (STRICT=1).
+//      c) every accepted byte comes back through loopback exactly once,
+//         in order; refused bytes never appear
+//   Options: +define+STRICT runs the DUT with STRICT_APB_ERR=1
 // APB sampling: PREADY / PRDATA / PSLVERR read mid-cycle before the completing edge.
 // Options: +PHALF=<ns> +UHALF=<ns>
 module tb_uart_v4_apb_cdc;
@@ -40,11 +51,30 @@ integer         r_errCnt, r_i, r_t, r_bad;
 reg     [31:0]  r_rd;
 reg             r_err;
 reg             r_sawBusy;
+`ifdef STRICT
+localparam      P_STRICT = 1'b1;
+`else
+localparam      P_STRICT = 1'b0;
+`endif
+// P11 scoreboard: bytes the DUT actually pushed into the TX FIFO
+reg     [7:0]   r_exp [0:255];
+reg     [7:0]   r_got [0:255];
+integer         r_nExp, r_nGot, r_nAcc0, r_nRef, r_nBadErr, r_k;
+reg             r_acc, r_fullAcc;
+initial r_nExp = 0;
+`ifndef GLS
+always @(posedge r_pclk)
+        if (uut.w_txWrEn) begin r_exp[r_nExp & 255] <= r_pwdata[7:0]; r_nExp <= r_nExp + 1; end
+`endif
 
 `ifdef GLS
 uart_v4_apb uut (
 `else
+`ifdef STRICT
+uart_v4_apb #(.FIFO_AW(4), .STRICT_APB_ERR(1'b1)) uut (
+`else
 uart_v4_apb #(.FIFO_AW(4)) uut (
+`endif
 `endif
         .i_pclk(r_pclk), .i_uclk(w_uclk), .rst_n(r_rst_n),
         .i_psel(r_psel), .i_penable(r_penable), .i_pwrite(r_pwrite),
@@ -283,6 +313,72 @@ initial begin
         rd(ADDR_BAUDDIV);
         check(r_rd[15:0] == 16'd2, "P10 BAUDDIV keeps 2 (refused 5 not taken)");
         check(uut.w_actCfg[15:0] == 16'd2, "P10 UART_CLK side divider = 2");
+        wr(ADDR_BAUDDIV, 32'd1); cfg_wait;              // restore
+`endif
+
+`ifndef GLS   // P11 needs FIFO internals (RTL only)
+        // ---------------- P11 ----------------
+        wr(ADDR_CTRL, 32'h87); cfg_wait;                // loopback 8N1
+        wr(ADDR_BAUDDIV, 32'd20); cfg_wait;             // slow TX: one byte = 16*21*10 UART_CLK
+        rd(ADDR_STATUS);
+        while (!r_rd[2]) begin rd(ADDR_RXDATA); rd(ADDR_STATUS); end   // RX empty
+        repeat (5) @(posedge r_pclk);
+        r_nExp = 0; r_nRef = 0; r_nBadErr = 0;
+        // a) burst
+        for (r_i = 0; r_i < 24; r_i = r_i + 1) begin
+                r_nAcc0 = r_nExp;
+                wr(ADDR_TXDATA, 8'hA0 + r_i);
+                @(posedge r_pclk); #0.01;                // scoreboard updated
+                r_acc = (r_nExp != r_nAcc0);
+                if (!r_acc) r_nRef = r_nRef + 1;
+                if (r_err != (P_STRICT && !r_acc)) r_nBadErr = r_nBadErr + 1;
+        end
+        rd(ADDR_STATUS);
+        check(r_rd[1] == 1'b1, "P11a TX FIFO full after burst (STATUS[1])");
+        check(r_nRef > 0 && r_nExp >= 16 && r_nExp <= 18, "P11a burst: 16..18 accepted, rest refused");
+        check(r_nBadErr == 0, "P11a PSLVERR = STRICT_APB_ERR exactly on refused writes");
+        $display("INFO: P11a accepted=%0d refused=%0d STRICT=%0d", r_nExp, r_nRef, P_STRICT);
+        // b) boundary: full=1 at SETUP end, 0 in ACCESS
+        r_t = 0;
+        @(negedge r_pclk);
+        while (!(uut.uut_uart_core.u_txFifo.o_full == 1'b1 &&
+                 uut.uut_uart_core.u_txFifo.w_fullNext == 1'b0) && r_t < 1000000) begin
+                @(negedge r_pclk); r_t = r_t + 1;
+        end
+        check(r_t < 1000000, "P11b found the cycle before TX full clears");
+        r_nAcc0 = r_nExp;
+        r_psel = 1; r_penable = 0; r_pwrite = 1; r_paddr = ADDR_TXDATA; r_pwdata = 32'h5A;
+        @(negedge r_pclk);                              // SETUP-ending edge saw full=1
+        r_penable = 1;
+        #0.01;
+        r_fullAcc = uut.w_txFifoFull;
+        r_err = w_pslverr;
+        check(w_pready == 1'b1, "P11b boundary write completes (PREADY=1)");
+        check(r_fullAcc == 1'b0, "P11b boundary hit: TX full already 0 during ACCESS");
+        @(posedge r_pclk); #0.01;
+        r_acc = (r_nExp != r_nAcc0);
+        @(negedge r_pclk);
+        r_psel = 0; r_penable = 0; r_pwrite = 0; r_paddr = 0; r_pwdata = 0;
+        if (P_STRICT)
+                check(r_err == 1'b1 && !r_acc, "P11b STRICT: refused (decided in SETUP), PSLVERR=1");
+        else
+                check(r_err == 1'b0 && r_acc, "P11b non-STRICT: accepted in ACCESS, PSLVERR=0");
+        // c) drain through loopback and compare
+        r_nGot = 0; r_t = 0;
+        rd(ADDR_STATUS);
+        while ((r_rd[4] || !r_rd[2]) && r_t < 200000) begin
+                if (!r_rd[2]) begin
+                        rd(ADDR_RXDATA);
+                        if (r_rd[9:8] != 2'b00) r_nBadErr = r_nBadErr + 1;
+                        r_got[r_nGot & 255] = r_rd[7:0]; r_nGot = r_nGot + 1;
+                end
+                rd(ADDR_STATUS); r_t = r_t + 1;
+        end
+        r_bad = (r_nGot != r_nExp);
+        for (r_k = 0; r_k < r_nExp && r_k < 256; r_k = r_k + 1)
+                if (r_got[r_k] !== r_exp[r_k]) r_bad = r_bad + 1;
+        check(r_t < 200000 && r_bad == 0 && r_nBadErr == 0, "P11c loopback = accepted bytes, in order, none extra/missing");
+        $display("INFO: P11c sent=%0d received=%0d", r_nExp, r_nGot);
         wr(ADDR_BAUDDIV, 32'd1); cfg_wait;              // restore
 `endif
 

@@ -1,7 +1,9 @@
 # RTL simulation results (Xcelium), summarized from logs
 
-apbcdc                 PASS   35  FAIL   0  | APB_CDC ALL PASS  pHalf=5.00 uHalf=7.30
-apbcdc_slowp           PASS   35  FAIL   0  | APB_CDC ALL PASS  pHalf=37.00 uHalf=5.30
+apbcdc                 PASS   44  FAIL   0  | APB_CDC ALL PASS  pHalf=5.00 uHalf=7.30
+apbcdc_slowp           PASS   44  FAIL   0  | APB_CDC ALL PASS  pHalf=37.00 uHalf=5.30
+apbcdc_strict          PASS   44  FAIL   0  | APB_CDC ALL PASS  pHalf=5.00 uHalf=7.30
+apbcdc_strict_slowp    PASS   44  FAIL   0  | APB_CDC ALL PASS  pHalf=37.00 uHalf=5.30
 baud                   PASS    9  FAIL   0  | BAUD_GEN ALL PASS
 cfg                    PASS   14  FAIL   0  | CFG_CDC ALL PASS  accepted=55 refused=23 pHalf=5.00 uHalf=13.10 seed=1
 core                   PASS   16  FAIL   0  | CORE ALL PASS  rxEntries=134 overflow=5 pHalf=5.00 uHalf=7.30 seed=1
@@ -13,3 +15,4 @@ status_sync            PASS    8  FAIL   0  | STATUS_SYNC ALL PASS  events=417 p
 status_sync_slowsrc    PASS    8  FAIL   0  | STATUS_SYNC ALL PASS  events=469 pulses=434 sHalf=41.00 dHalf=5.00 see
 v3reg_same             PASS   33  FAIL   0  |  UART V3 FINAL REGRESSION: ALL PASS
 v3reg_sep              PASS   33  FAIL   0  |  UART V3 FINAL REGRESSION: ALL PASS
+# apbcdc*: P11 (TX FIFO full, 2026-11-08) 추가 후. strict = STRICT_APB_ERR 1. PASS 수는 PASS가 든 줄 수(최종 ALL PASS 줄 포함)
