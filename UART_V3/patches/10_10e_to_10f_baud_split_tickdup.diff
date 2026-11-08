@@ -1,0 +1,169 @@
+--- a/1_rtl/uart_baud_gen.v
++++ b/1_rtl/uart_baud_gen.v
+@@ -1,26 +1,28 @@
+ `timescale 1ns/1ps
+ 
+ // ---------------------------------------------------------------------------
+-// uart_baud_gen  (step 10-A: terminal-count lookahead)
++// uart_baud_gen  (step 10-F)
+ //
+ // Behavior (same as step 9 when BAUDDIV is static):
+-//   - i_enable = 0 or BAUDDIV = 0 : counter held at 0, no tick
+-//   - otherwise o_tick16 pulses once every (BAUDDIV + 1) cycles
++//   - i_enable = 0 or BAUDDIV = 0 : no tick
++//   - otherwise a tick every (BAUDDIV + 1) cycles
++// Live BAUDDIV change (spec change vs step 9, kept from step 10-A):
++//   the change is detected (r_divChg) and the counter restarts with the
++//   new value. step 9 could wrap through 65536 cycles instead.
+ //
+-// Timing change:
+-//   step 9 : r_clkCnt -> (r_clkCnt == i_baudDiv) 16-bit compare -> 16-bit reset mux
+-//   step 10: r_cntLast is a flop that equals (r_clkCnt == BAUDDIV).
+-//            It is computed one cycle early as (r_clkCnt == BAUDDIV - 1)
+-//            when the counter increments, so the counter mux select
+-//            comes directly from a flop.
+-//   BAUDDIV - 1 and (BAUDDIV == 0) are registered (r_divM1, r_divZero).
+-//
+-// Live BAUDDIV change (spec change vs step 9):
+-//   step 9 compares against the live value, so if the new BAUDDIV is smaller
+-//   than the current count the counter wraps through 65536 before the next tick.
+-//   step 10 detects the change (r_divChg, registered compare) and restarts the
+-//   counter; the first tick comes (new BAUDDIV + 1) cycles after the restart,
+-//   i.e. <= new BAUDDIV + 4 cycles after the APB write. No 65536 stall.
++// Timing structure:
++//   step 10-A..E: 16-bit up counter + registered terminal flag (r_cntLast);
++//                 P&R worst group became the 16-bit increment carry chain
++//                 and the o_tick16 fanout.
++//   step 10-F   : - down counter loaded with BAUDDIV, terminal at 0
++//                   (no BAUDDIV - 1 register: r_divM1 removed)
++//                 - counter split into two 8-bit halves; the borrow from
++//                   the low byte is a registered flag (r_lowZero), so the
++//                   longest carry chain is 8 bits
++//                 - r_cntLast == (count == 0), set one cycle early by a
++//                   constant compare (count == 1)
++//                 - two identical tick registers (TX / RX) to halve the
++//                   tick fanout. Synthesis must not merge them.
+ // ---------------------------------------------------------------------------
+ module uart_baud_gen (
+ 	input 	wire 		clk,
+@@ -28,24 +30,26 @@
+ 	input 	wire		i_enable,
+ 	input	wire	[15:0]	i_baudDiv,
+ 
+-	output 	reg		o_tick16
++	output 	reg		o_tick16Tx,
++	output 	reg		o_tick16Rx
+ );
+ 
+-reg [15:0] r_clkCnt;
+-reg        r_cntLast;	// == (r_clkCnt == BAUDDIV)
+-reg [15:0] r_divM1;	// BAUDDIV - 1
++reg [7:0]  r_cntLo;
++reg [7:0]  r_cntHi;
++reg        r_lowZero;	// == (r_cntLo == 0)  -> borrow into r_cntHi
++reg        r_cntLast;	// == ({r_cntHi, r_cntLo} == 0)
+ reg        r_divZero;	// BAUDDIV == 0
+ reg [15:0] r_divD;	// BAUDDIV delayed 1 cycle
+ reg        r_divChg;	// BAUDDIV changed -> restart counter
+ 
++wire       w_load = !i_enable || r_divZero || r_divChg || r_cntLast;
++
+ always @(posedge clk or negedge rst_n) begin
+ 	if (!rst_n) begin
+-		r_divM1   <= 16'd0;
+ 		r_divZero <= 1'b1;
+ 		r_divD    <= 16'd0;
+ 		r_divChg  <= 1'b0;
+ 	end else begin
+-		r_divM1   <= i_baudDiv - 1'b1;
+ 		r_divZero <= (i_baudDiv == 16'd0);
+ 		r_divD    <= i_baudDiv;
+ 		r_divChg  <= (i_baudDiv != r_divD);
+@@ -54,25 +58,29 @@
+ 
+ always @(posedge clk or negedge rst_n) begin
+ 	if (!rst_n) begin
+-		r_clkCnt  <= 16'd0;
+-		r_cntLast <= 1'b0;
+-		o_tick16  <= 1'b0;
++		r_cntLo    <= 8'd0;
++		r_cntHi    <= 8'd0;
++		r_lowZero  <= 1'b1;
++		r_cntLast  <= 1'b0;
++		o_tick16Tx <= 1'b0;
++		o_tick16Rx <= 1'b0;
+ 	end else begin
+-		o_tick16 <= 1'b0;
+-
+-		if (!i_enable || r_divZero || r_divChg) begin
+-			r_clkCnt  <= 16'd0;
++		// tick when the count reaches 0 while running
++		o_tick16Tx <= i_enable && !r_divZero && !r_divChg && r_cntLast;
++		o_tick16Rx <= i_enable && !r_divZero && !r_divChg && r_cntLast;
++
++		if (w_load) begin
++			// load BAUDDIV (BAUDDIV >= 1 whenever the count runs)
++			r_cntLo   <= i_baudDiv[7:0];
++			r_cntHi   <= i_baudDiv[15:8];
++			r_lowZero <= (i_baudDiv[7:0] == 8'd0);
+ 			r_cntLast <= 1'b0;
+-
+-		end else if (r_cntLast) begin
+-			r_clkCnt  <= 16'd0;
+-			r_cntLast <= 1'b0;	// 0 == BAUDDIV is false (BAUDDIV >= 1)
+-			o_tick16  <= 1'b1;
+-
+ 		end else begin
+-			r_clkCnt  <= r_clkCnt + 1'b1;
+-			r_cntLast <= (r_clkCnt == r_divM1);
+-
++			r_cntLo   <= r_cntLo - 1'b1;
++			if (r_lowZero)
++				r_cntHi <= r_cntHi - 1'b1;
++			r_lowZero <= (r_cntLo == 8'd1);
++			r_cntLast <= (r_cntHi == 8'd0) && (r_cntLo == 8'd1);
+ 		end
+ 	end
+ end
+--- a/1_rtl/uart_core.v
++++ b/1_rtl/uart_core.v
+@@ -55,7 +55,10 @@
+ );
+ 
+ 
+-wire            w_tick16;
++wire            w_tick16Tx;
++wire            w_tick16Rx;
++wire            w_tick16;       // step 9 name, kept for testbench probes (no load)
++assign w_tick16 = w_tick16Rx;
+ 
+ wire            w_uartTx;
+ wire            w_uartRx;
+@@ -90,7 +93,8 @@
+         .i_enable       (i_enable),
+         .i_baudDiv      (i_baudDiv),
+ 
+-        .o_tick16       (w_tick16)
++        .o_tick16Tx     (w_tick16Tx),
++        .o_tick16Rx     (w_tick16Rx)
+ );
+ 
+ 
+@@ -101,7 +105,7 @@
+         .clk            (clk),
+         .rst_n          (rst_n),
+ 
+-        .i_tick16       (w_tick16),
++        .i_tick16       (w_tick16Tx),
+ 
+         .i_wrEn         (w_txWrEn),
+         .i_wrData       (i_txData),
+@@ -129,7 +133,7 @@
+         .clk            (clk),
+         .rst_n          (rst_n),
+ 
+-        .i_tick16       (w_tick16),
++        .i_tick16       (w_tick16Rx),
+         .i_uartRx       (w_uartRx),
+ 
+         .i_data7        (i_data7),

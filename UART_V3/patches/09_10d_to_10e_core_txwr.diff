@@ -1,0 +1,19 @@
+--- a/1_rtl/uart_core.v
++++ b/1_rtl/uart_core.v
+@@ -63,9 +63,13 @@
+ wire            w_txWrEn;
+ 
+ 
+-assign w_txWrEn = i_enable &&
+-                  i_txEn &&
+-                  i_txWrEn;
++// step 10-E: i_txWrEn (uart_apb r_txPush) is already qualified with
++// r_uartEn && r_txEn when the APB write is accepted (cycle N), and CTRL
++// cannot change before the push (cycle N+1): an APB transfer takes at
++// least 2 cycles. Re-gating with i_enable/i_txEn here was redundant and
++// pulled the high-fanout CTRL enable into the FIFO write-enable cone
++// (step 10-D P&R worst path: r_uartEn -> TX FIFO r_mem/SE).
++assign w_txWrEn = i_txWrEn;
+ 
+ 
+ assign o_uartTx = (i_enable && i_txEn) ?

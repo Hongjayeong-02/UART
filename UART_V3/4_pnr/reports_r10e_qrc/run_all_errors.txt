@@ -1,0 +1,1 @@
+      2 **ERROR: (IMPSP-9099):	Scan chains exist in this design but are not defined for 44.12% flops. Placement and timing QoR can be severely impacted in this case!

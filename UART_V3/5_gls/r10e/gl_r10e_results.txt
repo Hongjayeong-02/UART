@@ -1,0 +1,15 @@
+# UART V3 ⑩-E 1 GHz P&R netlist gate-level regression (TB clock 48 MHz, ⑨ QRC와 같은 xrun 명령)
+
+== gl_max : PASS 33 / FAIL 0 / *E 0
+   	Annotation completed with 0 Errors and 222 Warnings
+   SDF warnings:     222 *W,SDFNET 
+   Timing violation lines: 0
+   ⑨ QRC (glq_max):     181 *W,SDFNET 
+   PASS/FAIL 목록: ⑨ QRC와 동일
+
+== gl_min : PASS 33 / FAIL 0 / *E 0
+   	Annotation completed with 0 Errors and 222 Warnings
+   SDF warnings:      12 *W,SDFNDP     222 *W,SDFNET 
+   Timing violation lines: 0
+   ⑨ QRC (glq_min):       4 *W,SDFNDP     181 *W,SDFNET 
+   PASS/FAIL 목록: ⑨ QRC와 동일

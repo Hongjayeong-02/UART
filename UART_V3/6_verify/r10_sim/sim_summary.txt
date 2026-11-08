@@ -1,0 +1,38 @@
+# ⑩ sim 결과 (Xcelium, run_r10.sh). 각 variant RTL에 대해 regression · ⑨ lockstep · baud TB
+
+== r10
+   regression: PASS 33 / FAIL 0 | ALL PASS
+   LOCKSTEP seed=-987520296 cycles=201653 tx_frames=569 mismatches=0 rx_valid=205 (8bit 104) rxdata_reads_nonzero=201 direct_ok=144 direct_fail=0 => PASS
+   LOCKSTEP seed=-1724317572 cycles=196230 tx_frames=644 mismatches=0 rx_valid=208 (8bit 102) rxdata_reads_nonzero=207 direct_ok=144 direct_fail=0 => PASS
+   LOCKSTEP seed=627399099 cycles=194872 tx_frames=534 mismatches=0 rx_valid=187 (8bit 99) rxdata_reads_nonzero=185 direct_ok=144 direct_fail=0 => PASS
+   LOCKSTEP seed=-1004244020 cycles=200886 tx_frames=579 mismatches=0 rx_valid=201 (8bit 99) rxdata_reads_nonzero=198 direct_ok=144 direct_fail=0 => PASS
+   LOCKSTEP seed=973389513 cycles=200247 tx_frames=494 mismatches=0 rx_valid=163 (8bit 79) rxdata_reads_nonzero=160 direct_ok=144 direct_fail=0 => PASS
+   BAUD LIVE TB: checks=520 errors=0 | step9 late/stalled first tick (> new+1 or none)=113 / 400 => PASS
+
+== r10d
+   regression: PASS 33 / FAIL 0 | ALL PASS
+   LOCKSTEP seed=-987520296 cycles=201653 tx_frames=569 mismatches=0 rx_valid=205 (8bit 104) rxdata_reads_nonzero=201 direct_ok=144 direct_fail=0 => PASS
+   LOCKSTEP seed=-1724317572 cycles=196230 tx_frames=644 mismatches=0 rx_valid=208 (8bit 102) rxdata_reads_nonzero=207 direct_ok=144 direct_fail=0 => PASS
+   LOCKSTEP seed=627399099 cycles=194872 tx_frames=534 mismatches=0 rx_valid=187 (8bit 99) rxdata_reads_nonzero=185 direct_ok=144 direct_fail=0 => PASS
+   LOCKSTEP seed=-1004244020 cycles=200886 tx_frames=579 mismatches=0 rx_valid=201 (8bit 99) rxdata_reads_nonzero=198 direct_ok=144 direct_fail=0 => PASS
+   LOCKSTEP seed=973389513 cycles=200247 tx_frames=494 mismatches=0 rx_valid=163 (8bit 79) rxdata_reads_nonzero=160 direct_ok=144 direct_fail=0 => PASS
+   BAUD LIVE TB: checks=520 errors=0 | step9 late/stalled first tick (> new+1 or none)=113 / 400 => PASS
+
+== r10e
+   regression: PASS 33 / FAIL 0 | ALL PASS
+   LOCKSTEP seed=1487805061 cycles=229540 tx_frames=619 mismatches=0 rx_valid=196 (8bit 96) rxdata_reads_nonzero=187 direct_ok=144 direct_fail=0 push=237 premise_fail=0 => PASS
+   LOCKSTEP seed=-268388464 cycles=242167 tx_frames=657 mismatches=0 rx_valid=200 (8bit 109) rxdata_reads_nonzero=192 direct_ok=144 direct_fail=0 push=229 premise_fail=0 => PASS
+   LOCKSTEP seed=-1216927665 cycles=233843 tx_frames=701 mismatches=0 rx_valid=221 (8bit 120) rxdata_reads_nonzero=209 direct_ok=144 direct_fail=0 push=291 premise_fail=0 => PASS
+   LOCKSTEP seed=-1236245492 cycles=238147 tx_frames=681 mismatches=0 rx_valid=215 (8bit 100) rxdata_reads_nonzero=204 direct_ok=144 direct_fail=0 push=253 premise_fail=0 => PASS
+   LOCKSTEP seed=-1184239780 cycles=228644 tx_frames=718 mismatches=0 rx_valid=229 (8bit 120) rxdata_reads_nonzero=221 direct_ok=144 direct_fail=0 push=254 premise_fail=0 => PASS
+   BAUD LIVE TB: checks=520 errors=0 | step9 late/stalled first tick (> new+1 or none)=113 / 400 => PASS
+
+== r10f
+   regression: PASS 33 / FAIL 0 | ALL PASS
+   LOCKSTEP seed=1487805061 cycles=229540 tx_frames=619 mismatches=0 rx_valid=196 (8bit 96) rxdata_reads_nonzero=187 direct_ok=144 direct_fail=0 push=237 premise_fail=0 => PASS
+   LOCKSTEP seed=-268388464 cycles=242167 tx_frames=657 mismatches=0 rx_valid=200 (8bit 109) rxdata_reads_nonzero=192 direct_ok=144 direct_fail=0 push=229 premise_fail=0 => PASS
+   LOCKSTEP seed=-1216927665 cycles=233843 tx_frames=701 mismatches=0 rx_valid=221 (8bit 120) rxdata_reads_nonzero=209 direct_ok=144 direct_fail=0 push=291 premise_fail=0 => PASS
+   LOCKSTEP seed=-1236245492 cycles=238147 tx_frames=681 mismatches=0 rx_valid=215 (8bit 100) rxdata_reads_nonzero=204 direct_ok=144 direct_fail=0 push=253 premise_fail=0 => PASS
+   LOCKSTEP seed=-1184239780 cycles=228644 tx_frames=718 mismatches=0 rx_valid=229 (8bit 120) rxdata_reads_nonzero=221 direct_ok=144 direct_fail=0 push=254 premise_fail=0 => PASS
+   BAUD LIVE TB: checks=520 errors=0 | tx!=rx 0 | step9 late/stalled first tick (> new+1 or none)=113 / 400 => PASS
+   BAUD BIG TB: checks=108 errors=0 tx!=rx=0 => PASS

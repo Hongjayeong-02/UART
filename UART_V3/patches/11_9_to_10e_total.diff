@@ -1,0 +1,572 @@
+--- a/1_rtl/uart_baud_gen.v
++++ b/1_rtl/uart_baud_gen.v
+@@ -1,5 +1,27 @@
+ `timescale 1ns/1ps
+ 
++// ---------------------------------------------------------------------------
++// uart_baud_gen  (step 10-A: terminal-count lookahead)
++//
++// Behavior (same as step 9 when BAUDDIV is static):
++//   - i_enable = 0 or BAUDDIV = 0 : counter held at 0, no tick
++//   - otherwise o_tick16 pulses once every (BAUDDIV + 1) cycles
++//
++// Timing change:
++//   step 9 : r_clkCnt -> (r_clkCnt == i_baudDiv) 16-bit compare -> 16-bit reset mux
++//   step 10: r_cntLast is a flop that equals (r_clkCnt == BAUDDIV).
++//            It is computed one cycle early as (r_clkCnt == BAUDDIV - 1)
++//            when the counter increments, so the counter mux select
++//            comes directly from a flop.
++//   BAUDDIV - 1 and (BAUDDIV == 0) are registered (r_divM1, r_divZero).
++//
++// Live BAUDDIV change (spec change vs step 9):
++//   step 9 compares against the live value, so if the new BAUDDIV is smaller
++//   than the current count the counter wraps through 65536 before the next tick.
++//   step 10 detects the change (r_divChg, registered compare) and restarts the
++//   counter; the first tick comes (new BAUDDIV + 1) cycles after the restart,
++//   i.e. <= new BAUDDIV + 4 cycles after the APB write. No 65536 stall.
++// ---------------------------------------------------------------------------
+ module uart_baud_gen (
+ 	input 	wire 		clk,
+ 	input 	wire 		rst_n,
+@@ -10,30 +32,49 @@
+ );
+ 
+ reg [15:0] r_clkCnt;
++reg        r_cntLast;	// == (r_clkCnt == BAUDDIV)
++reg [15:0] r_divM1;	// BAUDDIV - 1
++reg        r_divZero;	// BAUDDIV == 0
++reg [15:0] r_divD;	// BAUDDIV delayed 1 cycle
++reg        r_divChg;	// BAUDDIV changed -> restart counter
+ 
+ always @(posedge clk or negedge rst_n) begin
+ 	if (!rst_n) begin
+-		r_clkCnt <= 16'd0;
+-		o_tick16 <= 1'b0;
++		r_divM1   <= 16'd0;
++		r_divZero <= 1'b1;
++		r_divD    <= 16'd0;
++		r_divChg  <= 1'b0;
++	end else begin
++		r_divM1   <= i_baudDiv - 1'b1;
++		r_divZero <= (i_baudDiv == 16'd0);
++		r_divD    <= i_baudDiv;
++		r_divChg  <= (i_baudDiv != r_divD);
++	end
++end
++
++always @(posedge clk or negedge rst_n) begin
++	if (!rst_n) begin
++		r_clkCnt  <= 16'd0;
++		r_cntLast <= 1'b0;
++		o_tick16  <= 1'b0;
+ 	end else begin
+ 		o_tick16 <= 1'b0;
+ 
+-		if (!i_enable) begin
+-			r_clkCnt <= 16'd0;
+-		
+-		end else if (i_baudDiv < 16'd1) begin	
+-			r_clkCnt <= 16'd0;
+-		
+-		end else if (r_clkCnt == i_baudDiv) begin
+-			r_clkCnt <= 16'd0;
+-			o_tick16 <= 1'b1;
+-		
++		if (!i_enable || r_divZero || r_divChg) begin
++			r_clkCnt  <= 16'd0;
++			r_cntLast <= 1'b0;
++
++		end else if (r_cntLast) begin
++			r_clkCnt  <= 16'd0;
++			r_cntLast <= 1'b0;	// 0 == BAUDDIV is false (BAUDDIV >= 1)
++			o_tick16  <= 1'b1;
++
+ 		end else begin
+-			r_clkCnt <= r_clkCnt + 1'b1;
+-		
++			r_clkCnt  <= r_clkCnt + 1'b1;
++			r_cntLast <= (r_clkCnt == r_divM1);
++
+ 		end
+ 	end
+ end
+ 
+ endmodule
+-
+--- a/1_rtl/uart_core.v
++++ b/1_rtl/uart_core.v
+@@ -63,9 +63,13 @@
+ wire            w_txWrEn;
+ 
+ 
+-assign w_txWrEn = i_enable &&
+-                  i_txEn &&
+-                  i_txWrEn;
++// step 10-E: i_txWrEn (uart_apb r_txPush) is already qualified with
++// r_uartEn && r_txEn when the APB write is accepted (cycle N), and CTRL
++// cannot change before the push (cycle N+1): an APB transfer takes at
++// least 2 cycles. Re-gating with i_enable/i_txEn here was redundant and
++// pulled the high-fanout CTRL enable into the FIFO write-enable cone
++// (step 10-D P&R worst path: r_uartEn -> TX FIFO r_mem/SE).
++assign w_txWrEn = i_txWrEn;
+ 
+ 
+ assign o_uartTx = (i_enable && i_txEn) ?
+--- a/1_rtl/uart_fifo.v
++++ b/1_rtl/uart_fifo.v
+@@ -57,6 +57,17 @@
+                 r_mem[r_wrPtr] <= i_wrData;
+ end
+ 
++// Read data register (step 10-C): load enable = w_rdEn only.
++// Step 9 loaded o_rdData inside the {w_wrEn, w_rdEn} case (01 and 11),
++// so the enable logic was merged with the write-side decode.
++// Same function: o_rdData updates exactly when w_rdEn = 1.
++always @(posedge clk or negedge rst_n) begin
++        if (!rst_n)
++                o_rdData <= 8'd0;
++        else if (w_rdEn)
++                o_rdData <= r_mem[r_rdPtr];
++end
++
+ always @(posedge clk or negedge rst_n) begin
+         if (!rst_n) begin
+ 
+@@ -67,8 +78,6 @@
+                 r_full    <= 1'b0;
+                 r_empty   <= 1'b1;
+ 
+-                o_rdData  <= 8'd0;
+-
+         end else begin
+ 
+                 case ({
+@@ -96,8 +105,6 @@
+                         // Read
+                         2'b01: begin
+ 
+-                                o_rdData <= r_mem[r_rdPtr];
+-
+                                 if (r_rdPtr == FIFO_DEPTH - 1)
+                                         r_rdPtr <= 0;
+                                 else
+@@ -115,9 +122,6 @@
+                         2'b11: begin
+ 
+ 
+-                                o_rdData <= r_mem[r_rdPtr];
+-
+-
+                                 if (r_wrPtr == FIFO_DEPTH - 1)
+                                         r_wrPtr <= 0;
+                                 else
+--- a/1_rtl/uart_rx.v
++++ b/1_rtl/uart_rx.v
+@@ -1,5 +1,8 @@
+ `timescale 1ns/1ps
+ 
++// step 10: r_tickMid / r_tickLast / r_bitLast lookahead flags replace the
++//          counter compares in the next-state logic; RX data is a shift register
++//          (removes the r_bitCnt write decoder).
+ module uart_rx (
+         input   wire            clk,
+         input   wire            rst_n,
+@@ -38,6 +41,9 @@
+ reg     [2:0]   r_state;
+ reg     [3:0]   r_tickCnt;
+ reg     [2:0]   r_bitCnt;
++reg             r_tickMid;      // == (r_tickCnt == 7)   (step 10-B lookahead)
++reg             r_tickLast;     // == (r_tickCnt == 15)  (step 10-B lookahead)
++reg             r_bitLast;      // == last data bit      (step 10-B lookahead)
+ 
+ reg     [7:0]   r_rxData;
+ 
+@@ -46,6 +52,7 @@
+ reg             r_stop2;
+ 
+ reg             r_parityErr;
++reg             r_parityAcc;    // expected parity, accumulated per data bit (step 10-D, from step 8)
+ reg             r_frameErr;
+ reg             r_stopCnt;
+ 
+@@ -73,6 +80,9 @@
+ 
+                 r_tickCnt       <= 4'd0;
+                 r_bitCnt        <= 3'd0;
++                r_tickMid       <= 1'b0;
++                r_tickLast      <= 1'b0;
++                r_bitLast       <= 1'b0;
+                 r_stopCnt       <= 1'b0;
+ 
+                 r_rxData        <= 8'd0;
+@@ -82,6 +92,7 @@
+                 r_stop2         <= 1'b0;
+ 
+                 r_parityErr     <= 1'b0;
++                r_parityAcc     <= 1'b0;
+                 r_frameErr      <= 1'b0;
+ 
+                 o_rxData        <= 8'd0;
+@@ -110,7 +121,10 @@
+                                 o_rxBusy        <= 1'b0;
+ 
+                                 r_tickCnt       <= 4'd0;
++                                r_tickMid       <= 1'b0;
++                                r_tickLast      <= 1'b0;
+                                 r_bitCnt        <= 3'd0;
++                                r_bitLast       <= 1'b0;
+                                 r_stopCnt       <= 1'b0;
+ 
+                                 // Falling level detected
+@@ -122,6 +136,7 @@
+                                         r_rxData        <= 8'd0;
+ 
+                                         r_parityErr     <= 1'b0;
++                                        r_parityAcc     <= (i_parityMode == PARITY_ODD);
+                                         r_frameErr      <= 1'b0;
+ 
+                                         o_rxBusy        <= 1'b1;
+@@ -140,12 +155,13 @@
+ 
+                                 if (i_tick16) begin
+ 
+-                                        if (r_tickCnt == 4'd7) begin
+-                                                r_tickCnt <= 4'd0;
++                                        if (r_tickMid) begin
++                                                r_tickCnt <= 4'd0;  r_tickMid <= 1'b0;  r_tickLast <= 1'b0;
+ 
+                                                 // Start bit still LOW
+                                                 if (!r_rxSync) begin
+                                                         r_bitCnt <= 3'd0;
++                                                        r_bitLast <= 1'b0;
+                                                         r_state  <= DATA;
+ 
+                                                 end else begin
+@@ -157,6 +173,8 @@
+ 
+                                         end else begin
+                                                 r_tickCnt <= r_tickCnt + 1'b1;
++                                                r_tickMid  <= (r_tickCnt == 4'd6);
++                                                r_tickLast <= (r_tickCnt == 4'd14);
+                                         end
+ 
+                                 end
+@@ -172,17 +190,21 @@
+ 
+                                 if (i_tick16) begin
+ 
+-                                        if (r_tickCnt == 4'd15) begin
+-                                                r_tickCnt <= 4'd0;
++                                        if (r_tickLast) begin
++                                                r_tickCnt <= 4'd0;  r_tickMid <= 1'b0;  r_tickLast <= 1'b0;
+ 
+-                                                // LSB first
+-                                                r_rxData[r_bitCnt] <= r_rxSync;
++                                                // LSB first, shift register (step 10-C):
++                                                // 8-bit: new bit enters [7]; 7-bit: enters [6], [7] stays 0.
++                                                // After the last data bit the contents equal step 9's
++                                                // r_rxData[r_bitCnt] <= r_rxSync result.
++                                                r_parityAcc <= r_parityAcc ^ r_rxSync;
++                                                if (r_data7)
++                                                        r_rxData <= {1'b0, r_rxSync, r_rxData[6:1]};
++                                                else
++                                                        r_rxData <= {r_rxSync, r_rxData[7:1]};
+ 
+                                                 // Last data bit
+-                                                if (
+-                                                        (r_data7  && (r_bitCnt == 3'd6)) ||
+-                                                        (!r_data7 && (r_bitCnt == 3'd7))
+-                                                ) begin
++                                                if (r_bitLast) begin
+ 
+                                                         if (r_parityMode == PARITY_NONE) begin
+                                                                 r_stopCnt <= 1'b0;
+@@ -192,11 +214,14 @@
+                                                         end
+ 
+                                                 end else begin
+-                                                        r_bitCnt <= r_bitCnt + 1'b1;
++                                                        r_bitCnt  <= r_bitCnt + 1'b1;
++                                                        r_bitLast <= r_data7 ? (r_bitCnt == 3'd5) : (r_bitCnt == 3'd6);
+                                                 end
+ 
+                                         end else begin
+                                                 r_tickCnt <= r_tickCnt + 1'b1;
++                                                r_tickMid  <= (r_tickCnt == 4'd6);
++                                                r_tickLast <= (r_tickCnt == 4'd14);
+                                         end
+ 
+                                 end
+@@ -211,44 +236,23 @@
+ 
+                                 if (i_tick16) begin
+ 
+-                                        if (r_tickCnt == 4'd15) begin
+-                                                r_tickCnt <= 4'd0;
++                                        if (r_tickLast) begin
++                                                r_tickCnt <= 4'd0;  r_tickMid <= 1'b0;  r_tickLast <= 1'b0;
+ 
+-                                                if (r_data7) begin
+-
+-                                                        if (r_parityMode == PARITY_EVEN) begin
+-
+-                                                                if (r_rxSync != (^r_rxData[6:0]))
+-                                                                        r_parityErr <= 1'b1;
+-
+-                                                        end else if (r_parityMode == PARITY_ODD) begin
+-
+-                                                                if (r_rxSync != (~^r_rxData[6:0]))
+-                                                                        r_parityErr <= 1'b1;
+-
+-                                                        end
+-
+-                                                end else begin
+-
+-                                                        if (r_parityMode == PARITY_EVEN) begin
+-
+-                                                                if (r_rxSync != (^r_rxData[7:0]))
+-                                                                        r_parityErr <= 1'b1;
+-
+-                                                        end else if (r_parityMode == PARITY_ODD) begin
+-
+-                                                                if (r_rxSync != (~^r_rxData[7:0]))
+-                                                                        r_parityErr <= 1'b1;
+-
+-                                                        end
+-
+-                                                end
++                                                // step 10-D: 8-input XOR tree removed (r_parityAcc).
++                                                // Reserved mode 2'b11: no check (same as step 9).
++                                                if (((r_parityMode == PARITY_EVEN) ||
++                                                     (r_parityMode == PARITY_ODD)) &&
++                                                    (r_rxSync != r_parityAcc))
++                                                        r_parityErr <= 1'b1;
+ 
+                                                 r_stopCnt <= 1'b0;
+                                                 r_state   <= STOP;
+ 
+                                         end else begin
+                                                 r_tickCnt <= r_tickCnt + 1'b1;
++                                                r_tickMid  <= (r_tickCnt == 4'd6);
++                                                r_tickLast <= (r_tickCnt == 4'd14);
+                                         end
+ 
+                                 end
+@@ -263,8 +267,8 @@
+ 
+                                 if (i_tick16) begin
+ 
+-                                        if (r_tickCnt == 4'd15) begin
+-                                                r_tickCnt <= 4'd0;
++                                        if (r_tickLast) begin
++                                                r_tickCnt <= 4'd0;  r_tickMid <= 1'b0;  r_tickLast <= 1'b0;
+ 
+                                                 // Stop bit must be HIGH
+                                                 if (!r_rxSync)
+@@ -280,6 +284,8 @@
+ 
+                                         end else begin
+                                                 r_tickCnt <= r_tickCnt + 1'b1;
++                                                r_tickMid  <= (r_tickCnt == 4'd6);
++                                                r_tickLast <= (r_tickCnt == 4'd14);
+                                         end
+ 
+                                 end
+--- a/1_rtl/uart_rx_fifo.v
++++ b/1_rtl/uart_rx_fifo.v
+@@ -167,6 +167,20 @@
+                 };
+ end
+ 
++// RX FIFO read data register (step 10-D): load enable = w_fifoRdEn only.
++// Step 9 loaded it inside the {w_fifoWrEn, w_fifoRdEn} case (01 and 11).
++always @(posedge clk or negedge rst_n) begin
++        if (!rst_n) begin
++                o_rdData        <= 8'd0;
++                o_rdParityErr   <= 1'b0;
++                o_rdFrameErr    <= 1'b0;
++        end else if (w_fifoRdEn) begin
++                o_rdFrameErr    <= r_mem[r_rdPtr][9];
++                o_rdParityErr   <= r_mem[r_rdPtr][8];
++                o_rdData        <= r_mem[r_rdPtr][7:0];
++        end
++end
++
+ // RX FIFO
+ always @(posedge clk or negedge rst_n) begin
+         if (!rst_n) begin
+@@ -178,10 +192,6 @@
+                 r_full          <= 1'b0;
+                 r_empty         <= 1'b1;
+ 
+-                o_rdData        <= 8'd0;
+-                o_rdParityErr   <= 1'b0;
+-                o_rdFrameErr    <= 1'b0;
+-
+         end else begin
+ 
+                 case ({
+@@ -211,9 +221,6 @@
+                         // Read
+                         2'b01: begin
+ 
+-                                o_rdFrameErr  <= r_mem[r_rdPtr][9];
+-                                o_rdParityErr <= r_mem[r_rdPtr][8];
+-                                o_rdData      <= r_mem[r_rdPtr][7:0];
+ 
+ 
+                                 if (r_rdPtr == FIFO_DEPTH - 1)
+@@ -235,9 +242,6 @@
+ 
+ 
+ 
+-                                o_rdFrameErr  <= r_mem[r_rdPtr][9];
+-                                o_rdParityErr <= r_mem[r_rdPtr][8];
+-                                o_rdData      <= r_mem[r_rdPtr][7:0];
+ 
+ 
+                                 if (r_wrPtr == FIFO_DEPTH - 1)
+--- a/1_rtl/uart_tx.v
++++ b/1_rtl/uart_tx.v
+@@ -1,5 +1,8 @@
+ `timescale 1ns/1ps
+ 
++// step 10: r_tickLast / r_bitLast lookahead flags replace the 4-bit / 3-bit
++//          compares in the next-state logic; TX data is a shift register
++//          (removes r_bitCnt + 1 and the 8:1 mux in front of o_uartTx).
+ module uart_tx (
+ 	input	wire		clk,
+ 	input	wire		rst_n,
+@@ -34,6 +37,8 @@
+ reg 	[2:0] 	r_state		;
+ reg 	[3:0] 	r_tickCnt	;
+ reg 	[2:0] 	r_bitCnt	;
++reg		r_tickLast	;	// == (r_tickCnt == 15)  (step 10-B lookahead)
++reg		r_bitLast	;	// == last data bit       (step 10-B lookahead)
+ reg	  	r_stopCnt	;
+ 
+ reg 	[7:0] 	r_txData	;
+@@ -52,6 +57,8 @@
+ 		r_state		<= IDLE;
+ 		r_tickCnt	<= 4'd0;
+ 		r_bitCnt	<= 3'd0;
++		r_tickLast	<= 1'b0;
++		r_bitLast	<= 1'b0;
+ 		r_stopCnt	<= 1'b0;
+ 		
+ 		r_txData	<= 8'd0;
+@@ -69,8 +76,8 @@
+ 
+ 		case (r_state)
+ 			IDLE: begin
+-				r_tickCnt 	<= 4'd0;
+-				r_bitCnt	<= 3'd0;
++				r_tickCnt 	<= 4'd0;	r_tickLast <= 1'b0;
++				r_bitCnt	<= 3'd0;	r_bitLast <= 1'b0;
+ 				r_stopCnt	<= 1'b0;
+ 
+ 				o_txReady	<= 1'b1;
+@@ -105,7 +112,7 @@
+ 				o_uartTx  <= 1'b1;
+ 
+ 				if (i_tick16) begin
+-					r_tickCnt <= 4'd0;
++					r_tickCnt <= 4'd0;	r_tickLast <= 1'b0;
+ 					o_uartTx  <= 1'b0;
+ 					r_state   <= START;
+ 				end
+@@ -117,15 +124,16 @@
+ 				o_uartTx <= 1'b0;
+ 
+ 				if (i_tick16) begin
+-					if (r_tickCnt == 4'd15) begin
+-						r_tickCnt <= 4'd0;
+-						r_bitCnt  <= 3'd0;
++					if (r_tickLast) begin
++						r_tickCnt <= 4'd0;	r_tickLast <= 1'b0;
++						r_bitCnt  <= 3'd0;	r_bitLast <= 1'b0;
+ 
+ 						o_uartTx  <= r_txData[0];
+ 						r_parityBit <= r_parityBit ^ r_txData[0];
++						r_txData  <= {1'b0, r_txData[7:1]};	// step 10-C: shift, next bit at [0]
+ 						r_state   <= DATA;
+ 					end else begin
+-						r_tickCnt <= r_tickCnt + 1'b1;
++						r_tickCnt <= r_tickCnt + 1'b1;	r_tickLast <= (r_tickCnt == 4'd14);
+ 					end
+ 				end
+ 			end
+@@ -133,13 +141,10 @@
+ 			
+ 			DATA: begin
+ 				if (i_tick16) begin
+-					if (r_tickCnt == 4'd15) begin
+-						r_tickCnt <= 4'd0;
++					if (r_tickLast) begin
++						r_tickCnt <= 4'd0;	r_tickLast <= 1'b0;
+ 	
+-					if (
+-						(r_data7 && r_bitCnt == 3'd6) ||
+-						(!r_data7 && r_bitCnt == 3'd7)
+-					) begin
++					if (r_bitLast) begin
+ 						if (r_parityMode == PARITY_NONE ) begin
+ 							r_stopCnt <= 1'b0;
+ 							o_uartTx  <= 1'b1;
+@@ -152,12 +157,14 @@
+ 						
+ 						end else begin
+ 							r_bitCnt <= r_bitCnt + 1'b1;
+-							o_uartTx <= r_txData[r_bitCnt + 1'b1];
+-							r_parityBit <= r_parityBit ^ r_txData[r_bitCnt + 1'b1];
++							r_bitLast <= r_data7 ? (r_bitCnt == 3'd5) : (r_bitCnt == 3'd6);
++							o_uartTx <= r_txData[0];
++							r_parityBit <= r_parityBit ^ r_txData[0];
++							r_txData <= {1'b0, r_txData[7:1]};
+ 						end
+ 
+ 					end else begin
+-						r_tickCnt <= r_tickCnt + 1'b1;
++						r_tickCnt <= r_tickCnt + 1'b1;	r_tickLast <= (r_tickCnt == 4'd14);
+ 					end
+ 				end
+ 			end
+@@ -167,15 +174,15 @@
+ 				o_uartTx <= w_parityOut;
+ 
+ 				if (i_tick16) begin
+-					if (r_tickCnt == 4'd15) begin
+-						r_tickCnt <= 4'd0;
++					if (r_tickLast) begin
++						r_tickCnt <= 4'd0;	r_tickLast <= 1'b0;
+ 						r_stopCnt <= 1'b0;
+ 
+ 						o_uartTx  <= 1'b1;
+ 						r_state   <= STOP;
+ 					
+ 					end else begin	
+-						r_tickCnt <= r_tickCnt + 1'b1;
++						r_tickCnt <= r_tickCnt + 1'b1;	r_tickLast <= (r_tickCnt == 4'd14);
+ 					end
+ 				end
+ 			end
+@@ -185,8 +192,8 @@
+ 				o_uartTx <= 1'b1;
+ 			
+ 				if (i_tick16) begin
+-					if (r_tickCnt == 4'd15) begin
+-						r_tickCnt <= 4'd0;
++					if (r_tickLast) begin
++						r_tickCnt <= 4'd0;	r_tickLast <= 1'b0;
+ 
+ 						if (
+ 							r_stop2 && !r_stopCnt
+@@ -198,7 +205,7 @@
+ 						end
+ 
+ 					end else begin
+-						r_tickCnt <= r_tickCnt + 1'b1;
++						r_tickCnt <= r_tickCnt + 1'b1;	r_tickLast <= (r_tickCnt == 4'd14);
+ 					end
+ 
+ 				end

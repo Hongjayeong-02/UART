@@ -32,7 +32,7 @@
 
 ## UART V3 · 1 GHz Timing Closure Study
 
-> **Target: 1 GHz · Timing closure: Not achieved** (최종 ⑨ QRC post-route R2R WNS −97 ps · cell area 5,830 µm²)
+> **Target: 1 GHz · Timing closure: Not achieved** (⑨ QRC post-route R2R WNS −97 ps · cell area 5,830 µm² → **⑩-E −46 ps**, 같은 SDC·flow, RTL만 변경)
 
 | | 결과 |
 |---|---|
@@ -43,7 +43,9 @@
 | Reset | 2-FF reset synchronizer(⑨) — recovery 181/181, removal 181/181 MET (⑦의 −7 ps 해소, ⑨ QRC에서도 동일) |
 | 검증 | regression 33/33 (매 수정), FIFO reset 동등성 50만 cycle, **gate-level regression 33/33 (SS/FF SDF, ⑨ · ⑨ QRC)** · SDF annotation 경고 181건 = reset 핀 REMOVAL/RECREM이 셀 모델($hold/$recovery)과 이름 불일치 → reset timing은 GLS가 아니라 STA(recovery/removal 181/181)로 확인 |
 | 타이밍 예외 | MCP 후보를 RTL·assertion으로 선별 → what-if STA WNS +12 ps → **미채택** |
-| 상태 | **1 GHz 미달성** · GLS는 48 MHz TB clock (at-speed 아님) · LEC는 아래 10 ns 절 |
+| **⑩ R2R 구조 최적화** | lookahead terminal-count flag(baud · TX · RX), TX/RX shift register, FIFO 읽기 enable 분리, RX parity 누적, core의 중복 TX 쓰기 게이팅 제거 → **post-route R2R WNS −97 → −46 ps, TNS −6.970 → −1.609 ns (−77 %), 위반 187 → 91** · hold 0 · DRC 0 · `report_area` +4.2 % · LEC(RTL→합성, 합성→P&R) PASS · gate-level 33/33 (SS/FF). 보조: 합성 over-constraint −34 ps, baud 8+8 분할(⑩-F) 면적 ⑨ 이하 but −76 ps. 상세: [docs/UART_V3/step10_r2r.md](docs/UART_V3/step10_r2r.md) |
+| ⑨ 기능 버그 (⑩에서 발견) | UART 동작 중 BAUDDIV를 현재 카운트보다 작게 바꾸면 ⑨ baud 카운터가 65,536 cycle 멈춘다(무작위 400건 중 113건). ⑩은 변경 감지 후 재시작. **10 ns · PAD top 결과는 ⑨ RTL 기준이라 이 버그를 포함** |
+| 상태 | **1 GHz 미달성** (⑩-E R2R −46 ps) · GLS는 48 MHz TB clock (at-speed 아님) · ⑨ LEC는 아래 10 ns 절, ⑩-E LEC는 1 GHz netlist |
 
 - 1 MHz P&R placement 이슈: [docs/UART_V3/pnr_placement_issue.md](docs/UART_V3/pnr_placement_issue.md)
 - LEC runbook: [docs/UART_V3/lec_runbook.md](docs/UART_V3/lec_runbook.md)

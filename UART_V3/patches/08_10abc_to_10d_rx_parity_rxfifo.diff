@@ -1,0 +1,130 @@
+--- a/1_rtl/uart_rx.v
++++ b/1_rtl/uart_rx.v
+@@ -52,6 +52,7 @@
+ reg             r_stop2;
+ 
+ reg             r_parityErr;
++reg             r_parityAcc;    // expected parity, accumulated per data bit (step 10-D, from step 8)
+ reg             r_frameErr;
+ reg             r_stopCnt;
+ 
+@@ -91,6 +92,7 @@
+                 r_stop2         <= 1'b0;
+ 
+                 r_parityErr     <= 1'b0;
++                r_parityAcc     <= 1'b0;
+                 r_frameErr      <= 1'b0;
+ 
+                 o_rxData        <= 8'd0;
+@@ -134,6 +136,7 @@
+                                         r_rxData        <= 8'd0;
+ 
+                                         r_parityErr     <= 1'b0;
++                                        r_parityAcc     <= (i_parityMode == PARITY_ODD);
+                                         r_frameErr      <= 1'b0;
+ 
+                                         o_rxBusy        <= 1'b1;
+@@ -194,6 +197,7 @@
+                                                 // 8-bit: new bit enters [7]; 7-bit: enters [6], [7] stays 0.
+                                                 // After the last data bit the contents equal step 9's
+                                                 // r_rxData[r_bitCnt] <= r_rxSync result.
++                                                r_parityAcc <= r_parityAcc ^ r_rxSync;
+                                                 if (r_data7)
+                                                         r_rxData <= {1'b0, r_rxSync, r_rxData[6:1]};
+                                                 else
+@@ -235,35 +239,12 @@
+                                         if (r_tickLast) begin
+                                                 r_tickCnt <= 4'd0;  r_tickMid <= 1'b0;  r_tickLast <= 1'b0;
+ 
+-                                                if (r_data7) begin
+-
+-                                                        if (r_parityMode == PARITY_EVEN) begin
+-
+-                                                                if (r_rxSync != (^r_rxData[6:0]))
+-                                                                        r_parityErr <= 1'b1;
+-
+-                                                        end else if (r_parityMode == PARITY_ODD) begin
+-
+-                                                                if (r_rxSync != (~^r_rxData[6:0]))
+-                                                                        r_parityErr <= 1'b1;
+-
+-                                                        end
+-
+-                                                end else begin
+-
+-                                                        if (r_parityMode == PARITY_EVEN) begin
+-
+-                                                                if (r_rxSync != (^r_rxData[7:0]))
+-                                                                        r_parityErr <= 1'b1;
+-
+-                                                        end else if (r_parityMode == PARITY_ODD) begin
+-
+-                                                                if (r_rxSync != (~^r_rxData[7:0]))
+-                                                                        r_parityErr <= 1'b1;
+-
+-                                                        end
+-
+-                                                end
++                                                // step 10-D: 8-input XOR tree removed (r_parityAcc).
++                                                // Reserved mode 2'b11: no check (same as step 9).
++                                                if (((r_parityMode == PARITY_EVEN) ||
++                                                     (r_parityMode == PARITY_ODD)) &&
++                                                    (r_rxSync != r_parityAcc))
++                                                        r_parityErr <= 1'b1;
+ 
+                                                 r_stopCnt <= 1'b0;
+                                                 r_state   <= STOP;
+--- a/1_rtl/uart_rx_fifo.v
++++ b/1_rtl/uart_rx_fifo.v
+@@ -167,6 +167,20 @@
+                 };
+ end
+ 
++// RX FIFO read data register (step 10-D): load enable = w_fifoRdEn only.
++// Step 9 loaded it inside the {w_fifoWrEn, w_fifoRdEn} case (01 and 11).
++always @(posedge clk or negedge rst_n) begin
++        if (!rst_n) begin
++                o_rdData        <= 8'd0;
++                o_rdParityErr   <= 1'b0;
++                o_rdFrameErr    <= 1'b0;
++        end else if (w_fifoRdEn) begin
++                o_rdFrameErr    <= r_mem[r_rdPtr][9];
++                o_rdParityErr   <= r_mem[r_rdPtr][8];
++                o_rdData        <= r_mem[r_rdPtr][7:0];
++        end
++end
++
+ // RX FIFO
+ always @(posedge clk or negedge rst_n) begin
+         if (!rst_n) begin
+@@ -178,10 +192,6 @@
+                 r_full          <= 1'b0;
+                 r_empty         <= 1'b1;
+ 
+-                o_rdData        <= 8'd0;
+-                o_rdParityErr   <= 1'b0;
+-                o_rdFrameErr    <= 1'b0;
+-
+         end else begin
+ 
+                 case ({
+@@ -211,9 +221,6 @@
+                         // Read
+                         2'b01: begin
+ 
+-                                o_rdFrameErr  <= r_mem[r_rdPtr][9];
+-                                o_rdParityErr <= r_mem[r_rdPtr][8];
+-                                o_rdData      <= r_mem[r_rdPtr][7:0];
+ 
+ 
+                                 if (r_rdPtr == FIFO_DEPTH - 1)
+@@ -235,9 +242,6 @@
+ 
+ 
+ 
+-                                o_rdFrameErr  <= r_mem[r_rdPtr][9];
+-                                o_rdParityErr <= r_mem[r_rdPtr][8];
+-                                o_rdData      <= r_mem[r_rdPtr][7:0];
+ 
+ 
+                                 if (r_wrPtr == FIFO_DEPTH - 1)
