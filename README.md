@@ -1,6 +1,6 @@
 # UART — RTL to Layout
 
-직접 설계한 UART를 단계적으로 확장한 저장소. V1(core) → V2(APB + FIFO + IRQ) → V3(peripheral IP, 합성·P&R·검증).
+직접 설계한 UART를 단계적으로 확장한 저장소. V1(core) → V2(APB + FIFO + IRQ) → V3(peripheral IP, 합성·P&R·검증) → V4(PCLK / UART_CLK dual-clock CDC).
 
 | 버전 | 내용 | 폴더 |
 |---|---|---|
