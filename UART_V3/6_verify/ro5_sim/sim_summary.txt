@@ -1,0 +1,8 @@
+# 5 ns 발표 RTL(⑨ RO + BAUDDIV >=) sim (Xcelium, ro5.sh sim)
+regression (⑨+fix): PASS 33 / FAIL 0 | ALL PASS
+READ_OPT_DIFF reads=191 writes=209 mismatch=0 -> PASS
+LOCKSTEP seed=1487805061 cycles=229540 tx_frames=619 mismatches=0 rx_valid=196 (8bit 96) rxdata_reads_nonzero=187 direct_ok=144 direct_fail=0 push=237 premise_fail=0 => PASS
+LOCKSTEP seed=-268388464 cycles=242167 tx_frames=657 mismatches=0 rx_valid=200 (8bit 109) rxdata_reads_nonzero=192 direct_ok=144 direct_fail=0 push=229 premise_fail=0 => PASS
+LOCKSTEP seed=-1216927665 cycles=233843 tx_frames=701 mismatches=0 rx_valid=221 (8bit 120) rxdata_reads_nonzero=209 direct_ok=144 direct_fail=0 push=291 premise_fail=0 => PASS
+BAUD BIG TB: checks=108 errors=0 tx!=rx=0 => PASS
+BAUD LIVE TB: checks=520 errors=0 | step9 late/stalled first tick (> new+1 or none)=113 / 400 => PASS

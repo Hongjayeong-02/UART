@@ -1,0 +1,22 @@
+# V3 5 ns PAD top RO + BAUDDIV fix : chip-level gate-level regression (hier netlist + SDF)
+# timing check 제외: RX synchronizer 첫 단 1개 (uut_uart_core_uut_rx_fifo_uut_rx_r_rxMeta_reg)
+
+== ro5_max_200 : PASS 33 / FAIL 0 / *E 0
+   	Annotation completed with 0 Errors and 197 Warnings
+   SDF warnings:     197 *W,SDFNET 
+   Timing violation lines: 0
+
+== ro5_max_48 : PASS 33 / FAIL 0 / *E 0
+   	Annotation completed with 0 Errors and 197 Warnings
+   SDF warnings:     197 *W,SDFNET 
+   Timing violation lines: 0
+
+== ro5_min_200 : PASS 33 / FAIL 0 / *E 0
+   	Annotation completed with 0 Errors and 241 Warnings
+   SDF warnings:      44 *W,SDFNDP     197 *W,SDFNET 
+   Timing violation lines: 0
+
+== ro5_min_48 : PASS 33 / FAIL 0 / *E 0
+   	Annotation completed with 0 Errors and 241 Warnings
+   SDF warnings:      44 *W,SDFNDP     197 *W,SDFNET 
+   Timing violation lines: 0

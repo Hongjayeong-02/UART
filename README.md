@@ -6,7 +6,7 @@
 |---|---|---|
 | V1 | UART core (baud gen, TX, RX), loopback TB · 1 GHz / 10 ns 합성·P&R(V3와 같은 flow) | [`UART_V1/`](UART_V1) |
 | V2 | APB register, TX/RX FIFO, interrupt, 모듈별 TB · 1 GHz / 10 ns 합성·P&R(V3와 같은 flow) | [`UART_V2/`](UART_V2) |
-| **V3** | APB3 peripheral IP, 1 GHz 합성·RTL 최적화·P&R·post-layout GLS · **10 ns 과제 P&R · PAD top · LEC** | [`UART_V3/`](UART_V3) |
+| **V3** | APB3 peripheral IP, 1 GHz 합성·RTL 최적화·P&R·post-layout GLS · **10 ns 과제 P&R · PAD top · LEC** · **발표 최종: 5 ns(200 MHz) PAD top RO** | [`UART_V3/`](UART_V3) |
 | **V4** | PCLK / UART_CLK 비동기 dual-clock APB UART (async FIFO 16, 설정 handshake, registered PSLVERR) · 10 ns 합성 · P&R · LEC · post-layout GLS · floorplan sweep | [`UART_V4/`](UART_V4) |
 
 ### V1 · V2 · V3 공통 방법론 비교 (post-route, 1 GHz 목표)
@@ -44,11 +44,31 @@
 | 검증 | regression 33/33 (매 수정), FIFO reset 동등성 50만 cycle, **gate-level regression 33/33 (SS/FF SDF, ⑨ · ⑨ QRC)** · SDF annotation 경고 181건 = reset 핀 REMOVAL/RECREM이 셀 모델($hold/$recovery)과 이름 불일치 → reset timing은 GLS가 아니라 STA(recovery/removal 181/181)로 확인 |
 | 타이밍 예외 | MCP 후보를 RTL·assertion으로 선별 → what-if STA WNS +12 ps → **미채택** |
 | **⑩ R2R 구조 최적화** | lookahead terminal-count flag(baud · TX · RX), TX/RX shift register, FIFO 읽기 enable 분리, RX parity 누적, core의 중복 TX 쓰기 게이팅 제거 → **post-route R2R WNS −97 → −46 ps, TNS −6.970 → −1.609 ns (−77 %), 위반 187 → 91** · hold 0 · DRC 0 · `report_area` +4.2 % · LEC(RTL→합성, 합성→P&R) PASS · gate-level 33/33 (SS/FF). 보조: 합성 over-constraint −34 ps, baud 8+8 분할(⑩-F) 면적 ⑨ 이하 but −76 ps. 상세: [docs/UART_V3/step10_r2r.md](docs/UART_V3/step10_r2r.md) |
-| ⑨ 기능 버그 (⑩에서 발견) | UART 동작 중 BAUDDIV를 현재 카운트보다 작게 바꾸면 ⑨ baud 카운터가 65,536 cycle 멈춘다(무작위 400건 중 113건). ⑩은 변경 감지 후 재시작. **10 ns · PAD top 결과는 ⑨ RTL 기준이라 이 버그를 포함** |
+| ⑨ 기능 버그 (⑩에서 발견) | UART 동작 중 BAUDDIV를 현재 카운트보다 작게 바꾸면 ⑨ baud 카운터가 65,536 cycle 멈춘다(무작위 400건 중 113건). ⑩은 변경 감지 후 재시작. **10 ns · PAD top 결과는 ⑨ RTL 기준이라 이 버그를 포함**, 5 ns 발표 최종에서 `==` → `>=`로 수정 |
 | 상태 | **1 GHz 미달성** (⑩-E R2R −46 ps) · GLS는 48 MHz TB clock (at-speed 아님) · ⑨ LEC는 아래 10 ns 절, ⑩-E LEC는 1 GHz netlist |
 
 - 1 MHz P&R placement 이슈: [docs/UART_V3/pnr_placement_issue.md](docs/UART_V3/pnr_placement_issue.md)
 - LEC runbook: [docs/UART_V3/lec_runbook.md](docs/UART_V3/lec_runbook.md)
+
+## 발표 최종 · 5 ns (200 MHz) PAD top RO + BAUDDIV 수정
+
+> **chip-level (`uart_chip_top_allpad`, 82 pad) · setup +0.226 ns · hold +0.012 ns · 위반 0 · DRC 0 · Conn 0**
+> gate-level 33/33 × SS/FF × TB clock **200 MHz(at-speed)** / 48 MHz · LEC RTL→합성 · 합성→P&R PASS (386)
+
+아래 10 ns PAD top RO와 같은 RTL 구조·P&R 스크립트에서 clock만 5 ns로 줄이고(I/O delay는 같은 40 % 규칙 → 2 ns), BAUDDIV 버그를 `>=` 한 글자로 고쳤다(추가 플롭 0, BAUDDIV 고정 시 ⑨와 동일 — lockstep 확인).
+
+| | 10 ns RO | **5 ns RO + 수정** |
+|---|---|---|
+| 합성 I2O / I2R / R2O / R2R (ps) | No paths / +3,748 / +4,404 / +7,747 | No paths / **+839 / +1,404 / +2,885** |
+| post-route setup WNS (all / reg2reg) | +3.255 ns | **+0.226 ns / +2.659 ns** |
+| post-route hold WNS | +0.012 ns | **+0.012 ns** |
+| `u_uart_apb` (`report_area`) | 3,929.9 µm² / 1,079 inst | **3,940.9 µm² / 1,104 inst (+0.3 %)** |
+| gate-level | 33/33 × SS/FF × 100 / 48 MHz | **33/33 × SS/FF × 200 / 48 MHz**, timing violation 0 |
+| LEC | 합성 ↔ P&R 386 | **RTL ↔ 합성 · 합성 ↔ P&R 386**, Non-eq 0 |
+
+- 10 ns 합성 slack에서 경로 지연을 역산해 5 ns를 미리 추정했고(I2R 약 +0.75 ns), 실제 +0.84 ns였다.
+- GLS 첫 run에서 SS 조합이 FAIL했다. 원인은 비동기 `i_uartRx`를 받는 synchronizer 첫 단(`r_rxMeta`)의 hold check → X 전파. SDC false path와 같은 기준으로 **이 플롭 하나만** timing check에서 뺐다(`-tfile`). 다른 플롭 위반 0.
+- 상세: [docs/UART_V3/ro5_200mhz.md](docs/UART_V3/ro5_200mhz.md)
 
 ## 과제 조건 10 ns (100 MHz) · PAD top · LEC
 

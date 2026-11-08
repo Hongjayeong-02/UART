@@ -1,0 +1,15 @@
+--- a/1_rtl/uart_baud_gen.v
++++ b/1_rtl_bf/uart_baud_gen.v
+@@ -24,7 +24,11 @@
+ 		end else if (i_baudDiv < 16'd1) begin	
+ 			r_clkCnt <= 16'd0;
+ 		
+-		end else if (r_clkCnt == i_baudDiv) begin
++		end else if (r_clkCnt >= i_baudDiv) begin
++			// '>=' (was '=='): if BAUDDIV is written smaller than the
++			// current count while running, tick and restart at once
++			// instead of wrapping through 65536 cycles. With a static
++			// BAUDDIV the count never exceeds it -> same as before.
+ 			r_clkCnt <= 16'd0;
+ 			o_tick16 <= 1'b1;
+ 		

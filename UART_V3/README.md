@@ -11,14 +11,16 @@ even/odd parity, 1/2 stop bit, RX data / parity·frame error / overflow interrup
 | `1_rtl/` | **최종 RTL (⑨ = ⑦ + reset synchronizer)**. top: `uart_apb`(peripheral), `uart_chip_top`(RX/TX PAD) |
 | `1_rtl_ro/` | **PADALL RO** `uart_apb.v`: read 응답을 플롭 출력으로 바꾼 버전(read +1 wait, write zero-wait). 나머지 모듈은 `1_rtl/`과 같음. 합성 결과: `3_syn/README_10ns_padall_ro.md` |
 | `1_rtl_pad/` | `uart_chip_top_allpad.v`: 외부 포트 82개 전부 PAD (PADDI 46 · PADDO 36), 10 ns 칩 레벨 P&R용 |
+| `1_rtl_bf/` | **발표 최종(5 ns PAD top RO)용 BAUDDIV 수정** `uart_baud_gen.v` (`==` → `>=`). 나머지는 `1_rtl` + `1_rtl_ro` + `1_rtl_pad`. 상세: [`docs/UART_V3/ro5_200mhz.md`](../docs/UART_V3/ro5_200mhz.md) |
 | `1_rtl_r10e/` | **⑩-E RTL** (1 GHz R2R 구조 최적화 대표안, `uart_apb` 아래 10개 모듈). 상세: [`docs/UART_V3/step10_r2r.md`](../docs/UART_V3/step10_r2r.md) |
-| `patches/` | 원본 → ③ → ④ → ⑦ → ⑨ 단계별 `diff -ruN`, ⑤ 기각안, ⑧ 미채택안 · **⑩: `07` lookahead·shift, `08` RX parity·RX FIFO, `09` core TX 쓰기, `10` ⑩-F baud 분할·tick 복제, `11` ⑨→⑩-E 전체** |
+| `patches/` | 원본 → ③ → ④ → ⑦ → ⑨ 단계별 `diff -ruN`, ⑤ 기각안, ⑧ 미채택안 · **⑩: `07` lookahead·shift, `08` RX parity·RX FIFO, `09` core TX 쓰기, `10` ⑩-F baud 분할·tick 복제, `11` ⑨→⑩-E 전체** · `12` BAUDDIV `>=` 수정(발표 최종) |
 | `2_tb/` | `tb_uart_v3_final.v`(regression 33 checks), `tb_uart_v3_final_gl.v`(같은 33 checks, 내부 신호 참조 없음 → gate-level용), `mcp_checker.sv`(MCP 근거 assertion), GLS·PAD TB · **`r10/`**: ⑨↔⑩ lockstep(`tb_lock.v`, ⑩-E 전제 assertion 포함), live/큰 BAUDDIV TB |
 | `3_syn/` | 1 GHz SDC(`cons/`), Genus 스크립트(`script/`), 핵심 리포트(④ `opt4`, ⑦ `pipe7`, ⑧ `rxp8`, ⑨ `rsync9`, 계층 유지 `hier`) · **10 ns**: `uart_v3_10ns.sdc`, `uart_v3_10ns_pad.sdc`, `run_synthesis_10ns_{rsync,pad2,padall}.tcl`, `reports/10ns_*` |
 | `4_pnr/` | Innovus 스크립트 0~5, MMMC(cap table 제거본), P&R SDC, sweep 스크립트, MCP what-if(`scripts/mcp_whatif.tcl`), 리포트(**최종 ⑨ QRC `reports_rsync9_qrc/`**, ⑦ QRC `reports_pipe7_qrc/`, cap table flow: ⑦ `reports_pipe7/`, ⑧ `reports_rxp8/`, ⑨ `reports_rsync9/`) |
 | `4_pnr/` (PADALL RO) | `scripts_padall_ro/`, `reports_10ns_padall_ro/` (최종 칩 레벨 P&R, 2026-11-06 재실행 · hold 목표 +5 ps), `reports_10ns_padall_ro_h20/` (이전 +20 ps 결과), **`init_io/`** (Init → floorplan → IO 배치 → IO filler, `init_io/README.md`, `init_io_1106.md`) |
 | `4_pnr/` (10 ns) | `scripts_10ns/`(V3: 바뀐 파일만 · rst_n false path SDC · hold 목표 +5 ps, 2차는 +20 ps), `scripts_padall/`(PAD top 전체 flow, IO 파일 생성 · modify LEF), **`reports_10ns_v3_h5/` (최종, hold 목표 +5 ps)**, `reports_10ns_v3/` (2차 +20 ps, `run1/` = 1차), `reports_10ns_padall/` (`run1/` = 1차) |
 | `5_gls/` | post-layout GLS용 SDF 설정 (smoke: max / min / recrem split, gate-level regression: `gl_max` / `gl_min`, ⑨ QRC: `glq_max` / `glq_min`, **10 ns 최종: `g10_{max,min}_{100,48}.cmd`**) · `gl10.sh`(10 ns GL 실행 스크립트) |
+| 5 ns 발표 최종 | `tools_ro5/`, `3_syn/cons/uart_v3_5ns_pad.sdc`, `3_syn/reports/5ns_padall_ro_bf/`, `4_pnr/scripts_5ns_padall_ro_bf/`, `4_pnr/reports_5ns_padall_ro_bf/`, `5_gls/ro5/`, `6_verify/lec/ro5_bf/`, `6_verify/ro5_sim/` |
 | ⑩ (1 GHz R2R) | `tools_r10/`(sim·합성·P&R·LEC·GLS 실행 스크립트), `3_syn/reports/r10*/`, `4_pnr/reports_r10*_qrc/`, `5_gls/r10e/`, `6_verify/lec/r10e/`, `6_verify/r10_sim/` |
 | `6_verify/` | `read_opt/`: V3 ↔ RO 같은 APB 시퀀스 비교 TB · regression 결과(`regression/*_pf.txt`), 동등성 비교 TB(`equivalence/`), 면적 합산 `area.awk`, **Conformal LEC**(`lec/`: RTL↔합성 `run_lec*.do`, 합성↔P&R `run_lec_pnr.do`, console 로그) |
 
@@ -48,6 +50,7 @@ make eq        # ③ vs ④ FIFO·TX 랜덤 비교, 원본 vs ④ FIFO reset 동
 | `RTL/UART_V3_padall_ro/`, `SYN/report_10ns_padall_ro/` | `1_rtl_ro/`, `3_syn/reports/10ns_padall_ro/` |
 | `PNR_10NS_PADALL_RO/`, `PNR_10NS_PADALL_RO_INITIO/` | `4_pnr/scripts_padall_ro/` + `reports_10ns_padall_ro/`, `4_pnr/init_io/` |
 | (수업 서버) `EC_10ns/` | `6_verify/lec/` |
+| `RTL/UART_V3_padall_ro_bf`, `SYN/report_5ns_padall_ro_bf`, `PNR/PNR_5NS_PADALL_RO_BF/`, (수업 서버) `lec_ro5/` | `1_rtl_bf/`, `3_syn/reports/5ns_padall_ro_bf/`, `4_pnr/*_5ns_padall_ro_bf/`, `6_verify/lec/ro5_bf/` |
 | `RTL/UART_V3_r10*`, `SYN/report_1ghz_r10*`, `PNR/PNR_1GHZ_R10*_QRC/`, `SIM/GL_R10E/`, (수업 서버) `lec_r10e/` | `1_rtl_r10e/`, `3_syn/reports/r10*/`, `4_pnr/reports_r10*_qrc/`, `5_gls/r10e/`, `6_verify/lec/r10e/` |
 
 ```tcsh
