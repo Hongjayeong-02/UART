@@ -129,13 +129,31 @@ RTL → 합성 Unreachable 19개는 모두 칩에서 쓰지 않는 플롭이다:
 
 pad-limited라 core 대부분이 비어 있고, 표준셀은 연결된 입력 PAD가 많은 왼쪽·아래 변 근처에 모였다. clk PAD는 오른쪽 위라 clock net이 core를 대각선으로 건너온다 → insertion delay 약 1 ns의 주요 원인으로 보임(skew 2 ps). clk PAD를 셀 쪽 변으로 옮기면 줄일 수 있다.
 
-### 7.6 PVS DRC · LVS 첫 실행 (병합 GDS: 표준셀 + IO)
+### 7.6 PVS DRC · LVS (병합 GDS: 표준셀 + IO)
+
+**1차 실행 (P&R 폴더의 streamOut map 사용)**
 
 | | 결과 |
 |---|---|
-| PVS DRC | 29 rule · 21,648건(rule당 1000개 상한 포함). 상위 금속·bondpad 층(M10/M11/CMET/VIA10), implant·well(NLVT · NW · NWR)에 집중. 하위 배선(M2/VIA1/M4/M6)은 수백 건, 위치 분류 전 |
-| PVS LVS | MISMATCH. 표준셀 내부 pmos 소자 인식 실패("can't match any device statement", NAND4BX1 · NOR3BX2 · MXI4XL 등), PAD 셀의 PAD 라벨 미연결 경고, psubstrate soft connection 398 |
+| PVS DRC | 29 rule · 21,648건(rule당 1000개 상한 포함). 상위 금속·bondpad 층, implant·well 층에 집중 |
+| PVS LVS | MISMATCH. 표준셀 내부 pmos 소자 인식 실패("can't match any device statement"), PAD 라벨 미연결 경고, psubstrate soft connection 398 |
 
-위반·불일치가 표준셀 내부와 IO·implant 층에 몰려 있어 라이브러리 GDS와 rule deck의 정합 문제로 추정한다. 분리 전이라 이 결과로 PAD ring 전원 연결은 판정하지 않는다. 다음 단계: 표준셀 1개 단독 LVS로 라이브러리 자체 문제인지 확인.
+**가설 검증: 라이브러리 문제인가?** 1차 결과만 보고 라이브러리 GDS와 rule deck의 정합 문제로 추정했으나, 표준셀 5종(INVX1 · NAND2X1 · NAND4BX1 · NOR3BX2 · DFFRHQX1)을 GDS 2종으로 단독 LVS 한 결과 **10/10 MATCH** → 라이브러리 가설 기각.
 
-참고: PVS 실행 시 Innovus 환경의 `OA_HOME`이 남아 있으면 "OA2.2 library directory does not seem to exist"로 바로 종료된다 → PVS 자체 OA로 바꿔서 실행. DRC deck에는 `layout_path "CELLNAME.gds"`가 주석 없이 들어 있어 실제 경로로 바꿔야 한다.
+**원인: streamOut layer map 불일치.** P&R 폴더의 map과 PDK가 제공하는 map을 비교하니 349줄이 달랐고, Cont · Metal1 · implant · Metal4 등의 GDS layer 번호가 rule deck 기대값과 어긋나 있었다. 셀 내부 소자가 인식되지 않은 이유가 이것으로 설명된다.
+
+**PDK map으로 다시 streamOut 후**
+
+| | 1차 | map 수정 후 |
+|---|---|---|
+| DRC | 29 rule · 21,648 | **4 rule · 826** |
+| DRC 위치 | – | 위치 분류된 550건(METAL4.W.2 454, soft_check 96) 전부 PAD ring, core 0. METAL4.SP.1.6 276건은 미분류 |
+| LVS 소자 인식 | 실패 다수 | malformed device 0, parameter mismatch 없음 |
+| LVS 결과 | MISMATCH | MISMATCH (cell 92 match / 7 mismatch, stamping conflict 22, psubstrate softchk 26) |
+
+남은 LVS mismatch 7종은 모두 "extra pin"이고 CTS · hold 버퍼와 delay 셀(CLKBUFX2, DLY1X1, DLY1X4 등)이다. 비교 리포트에 schematic `VDD` 핀에 대응하는 layout net이 없다는 항목이 있다.
+
+**판정**: core DRC 0은 확인, PVS LVS는 **미통과**. 이 결과로 PAD ring 전원 연결(7.1)은 아직 판정하지 않는다.
+다음 단계: (1) extra pin 셀 7종의 CDL 핀 순서·전원 핀 이름 확인, (2) 누락 VDD net 추적, (3) PAD ring Metal4 위반 위치 확인.
+
+참고: PVS 실행 시 Innovus 환경의 `OA_HOME`이 남아 있으면 "OA2.2 library directory does not seem to exist"로 바로 종료된다 → PVS 자체 OA로 바꿔서 실행. DRC deck에는 `layout_path "CELLNAME.gds"`가 주석 없이 들어 있어 실제 경로로 바꿔야 한다. streamOut은 반드시 PDK 제공 map으로 한다.
