@@ -157,3 +157,33 @@ pad-limited라 core 대부분이 비어 있고, 표준셀은 연결된 입력 PA
 다음 단계: (1) extra pin 셀 7종의 CDL 핀 순서·전원 핀 이름 확인, (2) 누락 VDD net 추적, (3) PAD ring Metal4 위반 위치 확인.
 
 참고: PVS 실행 시 Innovus 환경의 `OA_HOME`이 남아 있으면 "OA2.2 library directory does not seem to exist"로 바로 종료된다 → PVS 자체 OA로 바꿔서 실행. DRC deck에는 `layout_path "CELLNAME.gds"`가 주석 없이 들어 있어 실제 경로로 바꿔야 한다. streamOut은 반드시 PDK 제공 map으로 한다.
+
+### 7.7 LVS mismatch 원인 분리 (2026-11-11)
+
+7.6의 LVS MISMATCH를 실험으로 하나씩 분리했다. 아래 실험들은 모두 **복사본**(GDS · CDL · deck)으로 돌렸고, 원본 결과는 그대로 두었다. LVS는 **아직 통과가 아니다**.
+
+| 실험 | 바꾼 것 | 결과 | 판정 |
+|---|---|---|---|
+| lvs2 | PDK map으로 다시 streamOut | 계층 비교: cell 92 match / 7 mismatch | 출발점 |
+| 가설 확인 | CDL 핀 순서 · Verilog PG 연결 · 같은 이름 module | 셋 다 정상 | 기각 |
+| lvs3 | IO CDL의 `!` global 이름 제거 (`VSS!`→`VSS`) | 전원 이름 mismatch 0, PAD 셀 mismatch는 남음 | 이름 문제 해결 |
+| lvs4 | flat 비교 (automatch 끔) | core MOS **unmatched 0** (PMOS 4,368 / NMOS 4,070) | 표준셀 3종(CLKBUFX2 · DLY1X1 · DLY1X4) mismatch는 계층 추출 착시 |
+| lvs5 | CDL에서 BONDPAD52 인스턴스 제외 | 남은 것: top pin 0 : 86, IO bulk, IO 소자 2+2 | bondpad와 나머지 분리 |
+| lvs6 | deck이 label texttype 3도 읽게 | 변화 없음 | 기각 |
+| GDS 직접 확인 | top 셀 TEXT 개수 | **0개**. top term 82개가 위치만 있고 핀 도형 없음 | 라벨 없음 확정 |
+| lvs8 | LEF 핀 위치(instTerm pt)에 라벨 추가 | 라벨 84개 unattached | 그 위치에 금속 없음 |
+| lvs9 | GDS 실제 PAD 금속 위치에 라벨 추가 | **Pins 84 : 86**, Nets 4,931 : 4,929, 이름 안 맞는 pin 2 (VDDIOR · VSSIOR) | 라벨 원인 확정 |
+
+**IO LEF ↔ GDS 80 µm 불일치.** PAD 입력 셀의 LEF PAD 핀은 셀 안쪽 y 80.00–81.42 µm인데, streamOut된 GDS에서 실제 Metal11 PAD 금속은 다이 가장자리(LEF 좌표 y −0.005–1.415)에 있다. 차이 80 µm. 그래서 LEF 핀 좌표에 붙인 라벨은 금속을 못 만났다. 7.1의 corner 핀–레일 어긋남도 약 80 µm라 같은 원인일 가능성이 크지만, 아직 corner는 직접 확인하지 않았다. GDS의 PAD 금속은 4 × 1.42 µm 조각뿐이고 bondpad 구조가 없어 BONDPAD52(82개)가 인식되지 않는 것과도 맞는다.
+
+**남은 항목 (설계 결함으로 보지 않는 근거와 함께)**
+
+| 항목 | 내용 | 성격 |
+|---|---|---|
+| IO bulk | IO NMOS bulk 연결 layout 54 ↔ schematic 95 불일치, IO MP2/MN2 각 2개 차이 | CDL은 IO NMOS bulk를 VSS / VSSIOR로 나누는데 deck에는 기판 분리 규칙이 없어 하나의 p-substrate로 묶임 (stamping conflict 22, softchk 26). 라이브러리 · deck 한계 |
+| BONDPAD52 | 82개 layout 미인식 | IO GDS에 bondpad 인식층 없음 |
+| VDDIOR · VSSIOR 라벨 | net은 대응되나 이름 없음 | 두 net이 NoRoute라 라벨 위치를 못 뽑음 |
+
+**정식 수정 방향**: 라벨을 GDS에 직접 넣은 것은 원인 확인용 실험이다. 정식으로는 IO 라이브러리 LEF와 GDS의 PAD 핀 위치를 맞추고, top term에 실제 PAD 금속 위치로 physical pin을 만든 뒤 다시 streamOut해야 한다.
+
+**배운 것**: 세운 가설 중 라이브러리 결함 · CDL 핀 · texttype은 틀렸다. 매번 한 가지만 바꾼 복사본 실험과 GDS 직접 파싱으로 원인을 좁혔다.
