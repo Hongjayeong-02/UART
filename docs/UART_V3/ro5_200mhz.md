@@ -139,3 +139,53 @@ pad-limited라 core 대부분이 비어 있고, 표준셀은 연결된 입력 PA
 위반·불일치가 표준셀 내부와 IO·implant 층에 몰려 있어 라이브러리 GDS와 rule deck의 정합 문제로 추정한다. 분리 전이라 이 결과로 PAD ring 전원 연결은 판정하지 않는다. 다음 단계: 표준셀 1개 단독 LVS로 라이브러리 자체 문제인지 확인.
 
 참고: PVS 실행 시 Innovus 환경의 `OA_HOME`이 남아 있으면 "OA2.2 library directory does not seem to exist"로 바로 종료된다 → PVS 자체 OA로 바꿔서 실행. DRC deck에는 `layout_path "CELLNAME.gds"`가 주석 없이 들어 있어 실제 경로로 바꿔야 한다.
+
+## 7. 추가 분석 (발표 준비, 2026-11)
+
+모든 실험은 `ChipFinish` DB를 복원해서 실행했고 DB는 저장하지 않았다(제출 결과물 변경 없음).
+
+### 7.1 전원 connectivity 8건: 원인 좁히기
+
+| 넷 | 건수 | 위치 (µm) |
+|---|---|---|
+| VDD | 3 (special 1 + regular 2) | regular: 아래 PAD 행 y 145.38–156.61, 위 PAD 행 y 1743.39–1754.62, 둘 다 x 239–1653 |
+| VSS | 3 | 같은 구조 (아래 y 159.27–170.5, 위 y 1729.5–1740.74) |
+| VDDIOR · VSSIOR | 각 1 (NoRoute) | PAD 핀(Metal4)만 있고 배선 없음 |
+
+- 끊긴 x = 239 / 1653 = die 폭 1892에서 corner 셀(240 × 240) 경계. 넷마다 3조각: 좌우 PAD 행 + core / 아래 PAD 행 / 위 PAD 행.
+- 가설 1 "corner 셀에 PG 핀이 없다" → 기각. corner LEF에 VDD · VSS · VDDIOR · VSSIOR 핀이 있다(Metal4).
+- 가설 2 "corner 핀이 넷에 안 붙었다" → 기각. 4개 corner 모두 같은 이름 넷에 연결돼 있고, `globalNetConnect`를 다시 적용해도 3/3/1/1 그대로.
+- 가설 3 "flow에 padRing sroute가 빠졌다" → 기각. `sroute -connect padRing`을 추가하면 VDD/VSS는 그대로, VDDIOR/VSSIOR는 1 → 122로 악화(DRC 0). 적용하지 않음.
+- 남은 원인: corner VDD 핀이 1 µm 폭 조각(y 65.5–76.6)이라 PAD 레일(y 145–157)과 겹치지 않는다 → IO 라이브러리 abstract의 도형 불일치로 생긴 도구상 open으로 판단. 칩 레벨 전원 무결성은 미검증으로 유지.
+
+### 7.2 블록 vs 칩
+
+같은 `uart_apb` 로직의 10 ns 블록 P&R(`reports_10ns_v3_h5`)은 `verify_drc` 0, `verifyConnectivity` "no problems"(0). 8건은 core가 아니라 PAD ring에서 생긴다.
+
+### 7.3 slack 분포 (`report_timing -max_paths 3000 -nworst 1 -path_type end`)
+
+| | 경로 | 최소 / 최대 | 분포 |
+|---|---|---|---|
+| setup (SS) | 1,101 | +0.226 / +4.544 ns | 0.2–1.75 ns 133개 (input delay 2 ns가 걸린 입력 경로: `r_count`, `r_prdata`, `r_baudDiv`), 2.5 ns 이상 968개 |
+| hold (FF) | 1,101 | +0.012 / +0.542 ns | 50 ps 미만 641개 (hold 목표 +5 ps까지만 buffer 삽입) |
+
+주기를 더 줄이면 먼저 깨지는 경로는 RX FIFO count 갱신과 read 캡처(I2R)이고, reg2reg는 여유가 크다.
+
+### 7.4 power (static, 기본 activity)
+
+`u_uart_apb` 0.336 mW (internal 0.259 · switching 0.077 · leakage 0.00008) = 칩 전체 28.6 mW의 1.2 %. 나머지는 PAD.
+
+### 7.5 레이아웃 관찰
+
+pad-limited라 core 대부분이 비어 있고, 표준셀은 연결된 입력 PAD가 많은 왼쪽·아래 변 근처에 모였다. clk PAD는 오른쪽 위라 clock net이 core를 대각선으로 건너온다 → insertion delay 약 1 ns의 주요 원인으로 보임(skew 2 ps). clk PAD를 셀 쪽 변으로 옮기면 줄일 수 있다.
+
+### 7.6 PVS DRC · LVS 첫 실행 (병합 GDS: 표준셀 + IO)
+
+| | 결과 |
+|---|---|
+| PVS DRC | 29 rule · 21,648건(rule당 1000개 상한 포함). 상위 금속·bondpad 층(M10/M11/CMET/VIA10), implant·well(NLVT · NW · NWR)에 집중. 하위 배선(M2/VIA1/M4/M6)은 수백 건, 위치 분류 전 |
+| PVS LVS | MISMATCH. 표준셀 내부 pmos 소자 인식 실패("can't match any device statement", NAND4BX1 · NOR3BX2 · MXI4XL 등), PAD 셀의 PAD 라벨 미연결 경고, psubstrate soft connection 398 |
+
+위반·불일치가 표준셀 내부와 IO·implant 층에 몰려 있어 라이브러리 GDS와 rule deck의 정합 문제로 추정한다. 분리 전이라 이 결과로 PAD ring 전원 연결은 판정하지 않는다. 다음 단계: 표준셀 1개 단독 LVS로 라이브러리 자체 문제인지 확인.
+
+참고: PVS 실행 시 Innovus 환경의 `OA_HOME`이 남아 있으면 "OA2.2 library directory does not seem to exist"로 바로 종료된다 → PVS 자체 OA로 바꿔서 실행. DRC deck에는 `layout_path "CELLNAME.gds"`가 주석 없이 들어 있어 실제 경로로 바꿔야 한다.

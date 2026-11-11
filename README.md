@@ -70,6 +70,7 @@
 - GLS 첫 run에서 SS 조합이 FAIL했다. 원인은 비동기 `i_uartRx`를 받는 synchronizer 첫 단(`r_rxMeta`)의 hold check → X 전파. SDC false path와 같은 기준으로 **이 플롭 하나만** timing check에서 뺐다(`-tfile`). 다른 플롭 위반 0.
 - 상세: [docs/UART_V3/ro5_200mhz.md](docs/UART_V3/ro5_200mhz.md)
 - 추가 분석 (전원 8건 원인 · 블록 vs 칩 · slack 분포 · core power · PVS DRC/LVS 첫 실행): [ro5_200mhz.md §7](docs/UART_V3/ro5_200mhz.md#7-추가-분석-발표-준비-2026-11)
+- 추가 분석 (전원 8건 원인 · 블록 vs 칩 · slack 분포 · core power · PVS DRC/LVS 첫 실행): [ro5_200mhz.md §7](docs/UART_V3/ro5_200mhz.md#7-추가-분석-발표-준비-2026-11)
 
 ## 과제 조건 10 ns (100 MHz) · PAD top · LEC
 
