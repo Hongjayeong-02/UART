@@ -248,3 +248,36 @@ pad-limited라 core 대부분이 비어 있고, 표준셀은 연결된 입력 PA
 | min (FF SDF) · 200 MHz / 48 MHz TB | 33 / 33 | 0 / 0 | 0 / 0 |
 
 - min 쪽 `SDFNDP` 경고 44개(Innovus SDF 때도 동일): FF corner 입력 PAD `IOPATH PAD Y`가 음수(예: PADDI rise −0.084 ns). 입력 transition 0.5 ns에 비해 PAD 출력이 빨라 50 %–50 % 지연이 음수가 되는 것으로 보인다. GLS는 0으로 바꿔 적용하므로 hold 쪽으로 낙관적이다 → **hold 판정은 STA(+0.010 ns) 기준**, GLS는 기능 검증으로 본다.
+
+### 7.10 선택 과제 결과: corner 링 실험 · LVS 86/86 (2026-11-12)
+
+**1. Innovus에서 corner 안에 L자 Metal4 링을 추가해 open 0 확인: 실행 불가로 종료**
+
+| 시도 | 결과 |
+|---|---|
+| `setEdit`/`setEditMode` + `editAddRoute`/`editCommitRoute` (batch · GUI) | 에러 없이 wire 생성 안 됨 (VDD sWire 1249 → 1249) |
+| `addStripe -area` | `IMPPP-354`: IO 영역에 stripe를 만들지 않음 |
+
+옵션으로 억지로 넣는 실험은 증거 가치가 낮아 하지 않았다. 판정은 7.8 근거(LEF PORT 구조 · open 조각 위치 · GDS 링 연속 · flat LVS 단일 net)로 유지한다.
+
+**2. VDDIOR · VSSIOR 라벨 추가 → top pin 86/86**
+
+두 net은 NoRoute라 Innovus에서 라벨 위치를 뽑을 수 없다. PAD 셀 GDS에서 Metal4는 레일 전체가 아니라 셀 양 끝의 1 µm 핀 조각뿐이라, 레일 중간에 둔 라벨은 unattached였다. 핀 조각 중심으로 옮긴 뒤:
+
+| | lvs5 (라벨 없음) | lvs9 (신호 라벨) | lvs10 (+ VDDIOR · VSSIOR) |
+|---|---|---|---|
+| Pins | 0 : 86 | 84 : 86 | **86 : 86** |
+| Nets | 5,015 : 4,929 | 4,931 : 4,929 | **4,929 : 4,929** |
+| core MOS unmatched | 0 | 0 | 0 |
+
+**3. 남은 불일치는 IO 기판 하나**
+
+| 항목 | 값 |
+|---|---|
+| bulk 짝 (layout ↔ schematic) | `B: VSS` 46 ↔ `B: VSSIOR` 46 (그 외 net 없음) |
+| 나머지 schematic 쪽 bulk 목록 | 출력 PAD 셀(PADDO: prdata · irq · pready · pslverr · uart_tx) 내부 NMOS |
+| stamping conflict | 22 |
+
+회로도(IO CDL)는 IO NMOS bulk를 VSSIOR로 두고, layout은 단일 p-substrate가 VSS · VSSIOR 탭에 함께 닿아 VSS 하나로 묶인다. deck에 기판 분리 규칙이 없어 생기는 불일치로, 회로 결함이 아니라 라이브러리 · deck 한계로 판단한다. IO 두꺼운 산화막 MP/MN 각 2개 차이도 bulk가 달라 병렬 reduction이 달라진 결과로 본다(미확인).
+
+**정리**: 원본 GDS · CDL은 그대로 두고 복사본(라벨 추가, BONDPAD52 제외)으로 원인을 분리했다. LVS 공식 결과는 여전히 **미통과**이며, 남은 원인은 IO 기판 모델링 하나다.
