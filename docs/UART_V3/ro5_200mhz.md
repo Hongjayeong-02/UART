@@ -204,3 +204,47 @@ pad-limited라 core 대부분이 비어 있고, 표준셀은 연결된 입력 PA
 **판정**: open 8건은 corner LEF abstract가 내부 연결을 표현하지 않아 생긴 **도구상 open**으로 판단한다. GDS와 flat LVS에서는 링이 연결돼 있다. 다만 Innovus 안에서 corner 내부에 링을 직접 그려 open이 0이 되는지 확인하는 실험은 아직 하지 않았다.
 
 **유지되는 것**: PAD **신호 핀**(Metal11)의 LEF ↔ GDS 80 µm 차이는 SREF offset까지 포함해 계산한 값이라 그대로 유효하다 (7.7).
+
+### 7.9 Signoff STA (Tempus) + post-layout GLS (2026-11-12)
+
+**흐름**: ChipFinish DB → Innovus `extractRC` + `rcOut` (WORST · BEST SPEF) → Tempus `read_design` + `read_spef` + propagated clock → 점검 3종 → `write_sdf` → 같은 TB로 GLS.
+
+**Tempus 설정에서 놓치기 쉬운 것**
+
+| 증상 | 원인 | 조치 |
+|---|---|---|
+| `report_annotated_parasitics` 0 % | `read_design`은 DB만 읽고 RC는 안 읽음 | `read_spef -rc_corner WORST/BEST` 후 `update_timing -full` |
+| `check_timing`의 `ideal_clock_waveform` | SDC에 propagated clock이 없음 (Innovus는 CTS 후 자동 전환) | `set_interactive_constraint_modes [all_constraint_modes -active]` → `set_propagated_clock [all_clocks]` |
+| `set_propagated_clock` 거부 (TCLCMD-1048) | MMMC에서 constraint mode를 지정하지 않음 | 위와 같음 |
+
+**결과 (5 ns, SS 0.9 V 125 °C / FF 1.1 V 0 °C)**
+
+| | Innovus | Tempus | 차이 |
+|---|---|---|---|
+| setup worst (SS · WORST RC) | +0.226 ns | **+0.224 ns** | 2 ps |
+| hold worst (FF · BEST RC) | +0.012 ns | **+0.010 ns** | 2 ps |
+| coverage Violated | – | 0 | – |
+| SPEF 주석 (real net) | – | 93.8 % (1,241 / 1,323) | 빠진 82개 = top 포트 ↔ PAD net (top term에 물리 핀이 없어 SPEF에 없음, 7.7) |
+
+- setup worst: `i_paddr[0]` → `rx_fifo r_count_reg[4]` (I2R)
+- hold worst: `i_pwdata[4]` → `r_txPushData_reg[4]/SI`. `IO_DELAY_MIN = 0` 가정에서 나온 값이라 외부 인터페이스 min delay가 정해지면 다시 확인해야 한다.
+- 위반이 없어 ECO(`add_repeater`)는 하지 않았다.
+
+**check_timing 경고 분류: 검사에서 빠진 동기 경로 0**
+
+| 대상 | 개수 | 이유 |
+|---|---|---|
+| `o_prdata[31:16]`, `o_pslverr` | 17 | 상수 출력 (coverage Reason = const) |
+| `o_uartTx` / `i_uartRx` | 1 / 1 | 비동기 직렬, SDC `set_false_path` |
+| `r_rstSync_reg[0]/D` | 1 | 상수 `1'b1` |
+| `r_rstSync_reg[0:1]/RN` | 2 | 비동기 assert (`set_ideal_network rst_n`), 해제는 2단 동기화 |
+| `no_drive` | 입력 전부 | `set_driving_cell` 대신 `set_input_transition 0.5` 사용 |
+
+**post-layout GLS (Tempus SDF, 같은 TB · netlist)**
+
+| 실행 | PASS | FAIL | timing violation |
+|---|---|---|---|
+| max (SS SDF) · 200 MHz / 48 MHz TB | 33 / 33 | 0 / 0 | 0 / 0 |
+| min (FF SDF) · 200 MHz / 48 MHz TB | 33 / 33 | 0 / 0 | 0 / 0 |
+
+- min 쪽 `SDFNDP` 경고 44개(Innovus SDF 때도 동일): FF corner 입력 PAD `IOPATH PAD Y`가 음수(예: PADDI rise −0.084 ns). 입력 transition 0.5 ns에 비해 PAD 출력이 빨라 50 %–50 % 지연이 음수가 되는 것으로 보인다. GLS는 0으로 바꿔 적용하므로 hold 쪽으로 낙관적이다 → **hold 판정은 STA(+0.010 ns) 기준**, GLS는 기능 검증으로 본다.
