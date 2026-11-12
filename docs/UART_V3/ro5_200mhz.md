@@ -106,7 +106,7 @@ RTL → 합성 Unreachable 19개는 모두 칩에서 쓰지 않는 플롭이다:
 - 가설 1 "corner 셀에 PG 핀이 없다" → 기각. corner LEF에 VDD · VSS · VDDIOR · VSSIOR 핀이 있다(Metal4).
 - 가설 2 "corner 핀이 넷에 안 붙었다" → 기각. 4개 corner 모두 같은 이름 넷에 연결돼 있고, `globalNetConnect`를 다시 적용해도 3/3/1/1 그대로.
 - 가설 3 "flow에 padRing sroute가 빠졌다" → 기각. `sroute -connect padRing`을 추가하면 VDD/VSS는 그대로, VDDIOR/VSSIOR는 1 → 122로 악화(DRC 0). 적용하지 않음.
-- 남은 원인: corner VDD 핀이 1 µm 폭 조각(y 65.5–76.6)이라 PAD 레일(y 145–157)과 겹치지 않는다 → IO 라이브러리 abstract의 도형 불일치로 생긴 도구상 open으로 판단. 칩 레벨 전원 무결성은 미검증으로 유지.
+- 원인: corner LEF가 VDD/VSS 핀을 두 변에 **별도 PORT**로 정의하고, 둘을 잇는 L자 링 금속은 OBS로만 둔다. Innovus는 모서리를 지나는 연결을 따라가지 못해 아래·위 PAD 행이 별도 조각으로 보인다 (자세한 근거는 7.8). ~~corner 핀(y 65.5–76.6)과 PAD 레일(y 145–157)이 80 µm 어긋남~~ → LEF 원본 좌표와 DB 좌표를 섞어 비교한 실수로 철회.
 
 ### 7.2 블록 vs 칩
 
@@ -174,7 +174,7 @@ pad-limited라 core 대부분이 비어 있고, 표준셀은 연결된 입력 PA
 | lvs8 | LEF 핀 위치(instTerm pt)에 라벨 추가 | 라벨 84개 unattached | 그 위치에 금속 없음 |
 | lvs9 | GDS 실제 PAD 금속 위치에 라벨 추가 | **Pins 84 : 86**, Nets 4,931 : 4,929, 이름 안 맞는 pin 2 (VDDIOR · VSSIOR) | 라벨 원인 확정 |
 
-**IO LEF ↔ GDS 80 µm 불일치.** PAD 입력 셀의 LEF PAD 핀은 셀 안쪽 y 80.00–81.42 µm인데, streamOut된 GDS에서 실제 Metal11 PAD 금속은 다이 가장자리(LEF 좌표 y −0.005–1.415)에 있다. 차이 80 µm. 그래서 LEF 핀 좌표에 붙인 라벨은 금속을 못 만났다. 7.1의 corner 핀–레일 어긋남도 약 80 µm라 같은 원인일 가능성이 크지만, 아직 corner는 직접 확인하지 않았다. GDS의 PAD 금속은 4 × 1.42 µm 조각뿐이고 bondpad 구조가 없어 BONDPAD52(82개)가 인식되지 않는 것과도 맞는다.
+**IO LEF ↔ GDS 80 µm 불일치.** PAD 입력 셀의 LEF PAD 핀은 셀 안쪽 y 80.00–81.42 µm인데, streamOut된 GDS에서 실제 Metal11 PAD 금속은 다이 가장자리(LEF 좌표 y −0.005–1.415)에 있다. 차이 80 µm. 그래서 LEF 핀 좌표에 붙인 라벨은 금속을 못 만났다. (이 80 µm 차이는 PAD **신호 핀**에만 해당한다. 전원 링은 7.8 참고.) GDS의 PAD 금속은 4 × 1.42 µm 조각뿐이고 bondpad 구조가 없어 BONDPAD52(82개)가 인식되지 않는 것과도 맞는다.
 
 **남은 항목 (설계 결함으로 보지 않는 근거와 함께)**
 
@@ -187,3 +187,20 @@ pad-limited라 core 대부분이 비어 있고, 표준셀은 연결된 입력 PA
 **정식 수정 방향**: 라벨을 GDS에 직접 넣은 것은 원인 확인용 실험이다. 정식으로는 IO 라이브러리 LEF와 GDS의 PAD 핀 위치를 맞추고, top term에 실제 PAD 금속 위치로 physical pin을 만든 뒤 다시 streamOut해야 한다.
 
 **배운 것**: 세운 가설 중 라이브러리 결함 · CDL 핀 · texttype은 틀렸다. 매번 한 가지만 바꾼 복사본 실험과 GDS 직접 파싱으로 원인을 좁혔다.
+
+### 7.8 전원 open 8건: corner LEF PORT 구조 (2026-11-12)
+
+7.1의 "corner 핀–레일 80 µm 어긋남"은 **철회**한다. corner 핀 좌표(65.5–76.6)는 LEF 원본 좌표였고, PAD 레일(145–157)은 DB 좌표였다. 둘 사이의 80 µm는 LEF ORIGIN 차이일 뿐이다.
+
+| 확인 | 결과 |
+|---|---|
+| DB 좌표로 본 corner 경계 VDD 핀 | corner (x 239–240) → IO filler (240–244) → PAD (244–245), 모두 y 145.5–156.6 Metal4로 **빈틈없이 맞붙음** (corner 4곳 동일) |
+| GDS | corner와 PAD 셀 모두 GDS 셀 높이 160 / LEF 240, SREF가 똑같이 80 µm 밀려 배치. 레일 높이가 같아 **링 금속 연속** |
+| verifyConnectivity 마커 | open 5개가 "아래 행 VDD", "아래 행 VSS", "위 행 VDD", "위 행 VSS", "좌우 열 + core"의 **조각 bbox**. 조각 끝이 모두 corner 경계 |
+| corner LEF | `PIN VDD`에 **PORT 2개** (오른쪽 변 1 µm 조각, 위쪽 변 1 µm 조각). 둘을 잇는 금속은 OBS |
+| PAD LEF (비교) | `PIN VDD`의 양쪽 rect가 **한 PORT** 안에 있음 → 행 방향으로는 이어짐 |
+| flat LVS (7.7 lvs9) | VDD, VSS 각각 한 net으로 추출 |
+
+**판정**: open 8건은 corner LEF abstract가 내부 연결을 표현하지 않아 생긴 **도구상 open**으로 판단한다. GDS와 flat LVS에서는 링이 연결돼 있다. 다만 Innovus 안에서 corner 내부에 링을 직접 그려 open이 0이 되는지 확인하는 실험은 아직 하지 않았다.
+
+**유지되는 것**: PAD **신호 핀**(Metal11)의 LEF ↔ GDS 80 µm 차이는 SREF offset까지 포함해 계산한 값이라 그대로 유효하다 (7.7).
