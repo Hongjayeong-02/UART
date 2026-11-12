@@ -9,6 +9,39 @@
 | **V3** | APB3 peripheral IP, 1 GHz 합성·RTL 최적화·P&R·post-layout GLS · **10 ns 과제 P&R · PAD top · LEC** · **발표 최종: 5 ns(200 MHz) PAD top RO** | [`UART_V3/`](UART_V3) |
 | **V4** | PCLK / UART_CLK 비동기 dual-clock APB UART (async FIFO 16, 설정 handshake, registered PSLVERR) · 10 ns 합성 · P&R · LEC · post-layout GLS · floorplan sweep | [`UART_V4/`](UART_V4) |
 
+## 최종 Sign-off Summary · V3 5 ns (200 MHz) PAD top
+
+`uart_chip_top_allpad` (신호 PAD 82개 + 전원 PAD, corner 4) · setup SS 0.9 V 125 °C / hold FF 1.1 V 0 °C · 상세 근거는 [ro5_200mhz.md](docs/UART_V3/ro5_200mhz.md)
+
+| 단계 | 검사 | 결과 | 근거 |
+|---|---|---|---|
+| RTL 검증 | self-checking regression | **33/33 PASS** | [`UART_V3/2_tb/`](UART_V3/2_tb) |
+| 합성 (Genus) | I2O / I2R / R2O / R2R slack | No paths / +839 / +1,404 / +2,885 ps | [`3_syn/reports/5ns_padall_ro_bf/`](UART_V3/3_syn/reports/5ns_padall_ro_bf) |
+| LEC (Conformal) | RTL ↔ 합성 · 합성 ↔ P&R | **PASS 386 / 386** × 2, Non-eq 0 | [`6_verify/lec/ro5_bf/`](UART_V3/6_verify/lec/ro5_bf) |
+| P&R (Innovus) | setup / hold WNS, DRC | +0.226 (R2R +2.659) / +0.012 ns, DRC 0 | [`4_pnr/reports_5ns_padall_ro_bf/`](UART_V3/4_pnr/reports_5ns_padall_ro_bf) |
+| Signoff STA (Tempus) | setup / hold WNS, coverage | **+0.224 / +0.010 ns** (Innovus와 2 ps), Violated 0, SPEF 주석 93.8 % | [§7.9](docs/UART_V3/ro5_200mhz.md) |
+| Post-layout GLS | netlist + Tempus SDF (max / min) | **33/33** × SS/FF × 200 / 48 MHz, timing violation 0 | [`5_gls/ro5/`](UART_V3/5_gls/ro5), §7.9 |
+| 전원 연결 | Innovus verifyConnectivity | info 8 = corner LEF PORT 구조로 인한 도구상 open (GDS 링 연속) | §7.8 · §7.10 |
+| DRC (PVS) | sign-off rule deck | 21,648 → **826** (streamOut map 수정, core 0, 나머지 PAD ring) | §7.6 |
+| LVS (PVS) | sign-off rule deck | **미통과** · core MOS unmatched 0, Pins 86/86 (복사본 실험), 남은 원인 IO 기판 VSS ↔ VSSIOR 46쌍 | §7.7 · §7.10 |
+| ECO | Tempus → Innovus | 예정 (hold fix를 끈 별도 run) | — |
+| Power | Innovus | 전체 28.6 mW 중 UART core 0.336 mW (1.2 %) | §7 |
+
+## Flow · 교재 장 ↔ 위치 (V3 5 ns)
+
+| # | 단계 | 도구 | 교재 장 | 위치 | 상태 |
+|---|---|---|---|---|---|
+| 1 | Spec · RTL | — | 1권 | [`UART_V3/1_rtl*`](UART_V3), [`patches/`](UART_V3/patches) | 완료 |
+| 2 | 기능 검증 | Xcelium | 1권 4장 | [`UART_V3/2_tb/`](UART_V3/2_tb) | 완료 |
+| 3 | 합성 · SDC | Genus | 1권 | [`UART_V3/3_syn/`](UART_V3/3_syn) | 완료 |
+| 4 | Floorplan → Route → ChipFinish | Innovus | 2권 2~8장 | [`UART_V3/4_pnr/scripts_5ns_padall_ro_bf/`](UART_V3/4_pnr/scripts_5ns_padall_ro_bf) | 완료 |
+| 5 | Equivalence Check | Conformal | 2권 9장 | [`UART_V3/6_verify/lec/ro5_bf/`](UART_V3/6_verify/lec/ro5_bf) | 완료 |
+| 6 | RC 추출 · Post-STA | Innovus · Tempus | 2권 10장 | §7.9 | 완료 |
+| 7 | ECO | Tempus · Innovus | 2권 11장 | — | 예정 |
+| 8 | Post-layout Simulation | Xcelium | 2권 12장 | [`UART_V3/5_gls/ro5/`](UART_V3/5_gls/ro5) | 완료 |
+| 9 | Merge · Stream Out | Virtuoso | 2권 13장 | — | 예정 |
+| + | Sign-off DRC / LVS | PVS | (교재 범위 밖) | §7.6 ~ §7.10 | DRC 826 · LVS 미통과 |
+
 ### V1 · V2 · V3 공통 방법론 비교 (post-route, 1 GHz 목표)
 
 같은 SDC 파일(`uart_v3_1ghz.sdc`, 포트를 `all_inputs`/`all_outputs` 집합으로 지정) · 같은 corner(SS setup / FF hold) · QRC MMMC · 같은 P&R 스크립트(util 0.6), 핀 배치만 각 포트에 맞춤.
@@ -52,7 +85,7 @@
 
 ## 발표 최종 · 5 ns (200 MHz) PAD top RO + BAUDDIV 수정
 
-> **chip-level (`uart_chip_top_allpad`, 82 pad) · setup +0.226 ns · hold +0.012 ns · 위반 0 · DRC 0** · Conn: 10 ns RO와 같은 info 8건(IO ring 전원), 칩 레벨 전원 무결성은 미검증
+> **chip-level (`uart_chip_top_allpad`, 82 pad) · setup +0.226 ns · hold +0.012 ns · 위반 0 · DRC 0** · Conn info 8건(IO ring 전원) = corner LEF PORT 구조로 인한 도구상 open (§7.8)
 > gate-level 33/33 × SS/FF × TB clock **200 MHz(at-speed)** / 48 MHz · LEC RTL→합성 · 합성→P&R PASS (386)
 
 아래 10 ns PAD top RO와 같은 RTL 구조·P&R 스크립트에서 clock만 5 ns로 줄이고(I/O delay는 같은 40 % 규칙 → 2 ns), BAUDDIV 버그를 `>=` 한 글자로 고쳤다(추가 플롭 0, BAUDDIV 고정 시 ⑨와 동일 — lockstep 확인).
@@ -69,7 +102,7 @@
 - 10 ns 합성 slack에서 경로 지연을 역산해 5 ns를 미리 추정했고(I2R 약 +0.75 ns), 실제 +0.84 ns였다.
 - GLS 첫 run에서 SS 조합이 FAIL했다. 원인은 비동기 `i_uartRx`를 받는 synchronizer 첫 단(`r_rxMeta`)의 hold check → X 전파. SDC false path와 같은 기준으로 **이 플롭 하나만** timing check에서 뺐다(`-tfile`). 다른 플롭 위반 0.
 - 상세: [docs/UART_V3/ro5_200mhz.md](docs/UART_V3/ro5_200mhz.md)
-- 추가 분석 (전원 8건 원인 · 블록 vs 칩 · slack 분포 · core power · PVS DRC/LVS 첫 실행): [ro5_200mhz.md §7](docs/UART_V3/ro5_200mhz.md#7-추가-분석-발표-준비-2026-11)
+- 추가 분석 (전원 8건 원인 · 블록 vs 칩 · slack 분포 · core power · PVS DRC/LVS · Tempus signoff · post-layout GLS): [ro5_200mhz.md §7](docs/UART_V3/ro5_200mhz.md#7-추가-분석-발표-준비-2026-11) (§7.6 ~ §7.10)
 
 ## 과제 조건 10 ns (100 MHz) · PAD top · LEC
 
@@ -131,7 +164,7 @@ V1 · V2 · V3 모두 같은 10 ns SDC와 P&R 스크립트다. V3만 rst_n false
 
 ## 도구
 
-Cadence Genus · Innovus · Xcelium · Conformal LEC · Icarus Verilog · 45 nm 교육용 PDK (미포함)
+Cadence Genus · Innovus · Tempus · Xcelium · Conformal LEC · PVS · Icarus Verilog · Python (GDS 파싱) · 45 nm 교육용 PDK (미포함)
 
 ---
 Hong Jayoung · github.com/Hongjayeong-02
