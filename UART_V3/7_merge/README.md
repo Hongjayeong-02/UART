@@ -42,10 +42,23 @@
 
 `uart_chip_final.gds` (65.8 MB) · **0 error**, warning 1 (XSTRM-20 기존 파일 덮어쓰기). 교재 실측은 0 error · 138 warning.
 
-## 5. 남은 것
+## 5. Sign-off DRC (PVS, 최종 GDS)
+
+§7.6과 같은 rule deck · 실행 옵션(`pvs -drc -dp 4`), 입력만 `uart_chip_final.gds`로 교체.
+
+| Rule | §7.6 (Innovus `-merge` GDS) | 최종 GDS (Virtuoso merge + SEALRING · LOGO) |
+|---|---|---|
+| METAL4.SP.1.6 | 276 | 276 |
+| METAL4.W.2 | 454 | 454 |
+| soft_check_4 | 95 | 95 |
+| soft_check_5 | 1 | 1 |
+| 합계 | 826 | **826** |
+
+Merge 경로(Innovus `streamOut -merge` ↔ Virtuoso Stream In ×3)가 달라도 같은 결과 → 두 도면의 도형이 같다. SEALRING · LOGO · 원점 이동으로 새로 생긴 위반 0. 남은 826건은 §7.6에서 분류한 PAD ring Metal4 항목이다.
+
+## 6. 남은 것
 
 | 항목 | 상태 |
 |---|---|
 | re-stream (최종 GDS를 새 라이브러리로 다시 읽기) | 선택 |
-| 최종 GDS로 PVS DRC (§7.6의 826과 비교) | 선택 |
 | LVS | §7.10: IO 기판 모델링으로 미통과 |

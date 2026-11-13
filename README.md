@@ -22,7 +22,7 @@
 | Signoff STA (Tempus) | setup / hold WNS, coverage | **+0.224 / +0.010 ns** (Innovus와 2 ps), Violated 0, SPEF 주석 93.8 % | [§7.9](docs/UART_V3/ro5_200mhz.md) |
 | Post-layout GLS | netlist + Tempus SDF (max / min) | **33/33** × SS/FF × 200 / 48 MHz, timing violation 0 | [`5_gls/ro5/`](UART_V3/5_gls/ro5), §7.9 |
 | 전원 연결 | Innovus verifyConnectivity | info 8 = corner LEF PORT 구조로 인한 도구상 open (GDS 링 연속) | §7.8 · §7.10 |
-| Merge (Virtuoso) | Stream In ×3 → SEALRING · Origin · LOGO → Stream Out | **0 error** · PDK map으로 Stream In 경고 182,170 → 113 · 1912 × 1920 µm | [`7_merge/`](UART_V3/7_merge) |
+| Merge (Virtuoso) | Stream In ×3 → SEALRING · Origin · LOGO → Stream Out | **0 error** · PDK map으로 Stream In 경고 182,170 → 113 · 1912 × 1920 µm · 최종 GDS PVS DRC 826 (변화 없음) | [`7_merge/`](UART_V3/7_merge) |
 | DRC (PVS) | sign-off rule deck | 21,648 → **826** (streamOut map 수정, core 0, 나머지 PAD ring) | §7.6 |
 | LVS (PVS) | sign-off rule deck | **미통과** · core MOS unmatched 0, Pins 86/86 (복사본 실험), 남은 원인 IO 기판 VSS ↔ VSSIOR 46쌍 | §7.7 · §7.10 |
 | ECO (실습) | hold fix를 끈 run → Tempus `add_repeater` → Innovus | hold −0.075 ns · 110 위반 → **+0.001 ns · 0** (CLKBUFX2 280), DRC 0, 새 open 0 · setup +0.063 · **LEC 386/386 PASS** | [`4_pnr/eco_hold/`](UART_V3/4_pnr/eco_hold) |
