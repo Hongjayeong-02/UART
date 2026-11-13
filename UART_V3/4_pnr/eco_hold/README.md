@@ -82,14 +82,26 @@ SI/SE 핀이 많은 이유: 설계에 scan이 없지만 Genus가 load-enable FF�
 
 endpoint 단위 처방은 셀 수와 setup 여유 양쪽에서 비싸다. 국소 수정(late ECO, metal-only 등)에 맞는 방식이고, 대량 위반은 P&R 단계 최적화가 효율적이다.
 
-## 6. 남은 것
+## 6. LEC (Conformal, [`lec/`](lec))
+
+Genus 5 ns netlist(golden) ↔ ECO 후 P&R netlist `uart_chip_top_allpad_eco.v`(revised), liberty(SS std + IO)로 읽어 원본 5 ns LEC([`6_verify/lec/ro5_bf/`](../../6_verify/lec/ro5_bf))와 같은 조건.
+
+| 항목 | 결과 |
+|---|---|
+| Mapped key points (PI / PO / DFF) | 46 / 36 / 350, unmapped 0 |
+| Compared points | **386 Equivalent**, Non-eq 0, Abort 0 → **PASS** |
+| black box | 0 |
+| BUF primitive (golden → revised) | 82 → 426 (ECO 280 + CTS 등 P&R 버퍼) |
+
+buffer는 key point가 아니므로 비교점 수가 ECO 전(386)과 같다. 논리 변경 없이 delay만 더했다는 근거다.
+
+## 7. 남은 것
 
 | 항목 | 상태 |
 |---|---|
-| LEC (합성 netlist ↔ `uart_chip_top_allpad_eco.v`) | 예정 (buffer만 추가 → Non-eq 0 예상, 미확인) |
-| Post-layout GLS (ECO SDF) | 선택 |
+| Post-layout GLS (ECO SDF) | 선택 (미수행) |
 
-## 7. 파일
+## 8. 파일
 
 | 경로 | 내용 |
 |---|---|
@@ -98,3 +110,4 @@ endpoint 단위 처방은 셀 수와 setup 여유 양쪽에서 비싸다. 국소
 | `reports/tempus_eco/` | 00 hold 전 · 10 setup 전 · 20 endpoint별 log · 30 hold 후 · 40 setup 후 |
 | `reports/tempus_p2/` | Practice 2: check_timing · parasitics · coverage · setup · hold · violators |
 | `reports/innovus/` | timeDesign summary (전 · 후 · final), DRC, conn, area |
+| `lec/` | dofile · console (PASS 386/386) |

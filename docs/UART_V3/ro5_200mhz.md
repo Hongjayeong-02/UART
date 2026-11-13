@@ -295,5 +295,5 @@ hold fix(`optDesign -postCTS/-postRoute -hold`)만 끈 별도 run으로 위반�
 
 - 목표 +10 ps → 배선 후 +1 ps: Tempus의 배선 추정과 실제 `ecoRoute`의 차이.
 - 원본 칩(Innovus 자동 hold fix, 50셀, setup 손실 0.064 ns)보다 셀 5.6배 · setup 손실 3.5배. endpoint 단위 ECO는 국소 수정용이다.
-- LEC(합성 ↔ ECO netlist)는 아직 하지 않았다.
+- LEC(Genus netlist ↔ ECO netlist): **386 / 386 Equivalent, Non-eq 0 · PASS** (`eco_hold/lec/`).
 

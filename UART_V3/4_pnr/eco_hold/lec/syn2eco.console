@@ -1,0 +1,155 @@
+This program is proprietary and confidential information belonging to
+Cadence Design Systems, Inc., and may be used and disclosed only as authorized
+in a license agreement controlling such use and disclosure.
+
+// Warning: This version is 1536 days old. You can download the latest version from http://downloads.cadence.com.
+
+// Check out Conformal_Ultra 22.1 license
+// Check out Conformal_Asic 22.1 license
+// Command: set log file ./log/lec_ro5_syn2eco.log -replace
+// Command: set dofile abort exit
+// Command: read library -liberty -both <PDK>/std/stdlib/timing/std_ss.lib <PDK>/io/timing/io_ss.lib
+// Parsing file <PDK>/std/stdlib/timing/std_ss.lib ...
+// Parsing file <PDK>/io/timing/io_ss.lib ...
+// Warning: (RTL9.17) Cell doesn't have any output pins or all output pins are undriven (blackboxed) (occurrence:10)
+// Note: (RTL9.26) Liberty pin with internal_node use default input_map (occurrence:16)
+// Note: Read Liberty library successfully
+CPU time     : 0.21    seconds
+Elapse time  : 0       seconds
+Memory usage : 74.69   M bytes
+// Command: set undefined cell black_box -noascend -both
+// Command: read design -verilog -golden  ./netlist/uart_chip_top_allpad_netlist.v
+// Parsing file ./netlist/uart_chip_top_allpad_netlist.v ...
+// Golden root module is set to 'uart_chip_top_allpad'
+// Warning: (RTL2.5) Net is referenced without an assignment. Design verification will be based on set_undriven_signal setting (occurrence:16)
+// Warning: (RTL2.13) Undriven pin is detected (occurrence:17)
+// Warning: (RTL14) Signal has input but it has no output (occurrence:18)
+// Warning: (RTL14.1) Fanout load of the signal is removed (occurrence:16)
+// Warning: (HRC3.10a) An input port is declared, but it is not completely used in the module (occurrence:16)
+// Warning: There are 17 undriven nets in Golden
+// Warning: There are 17 undriven pins in Golden
+// Note: Read VERILOG design successfully
+// Command: set root module uart_chip_top_allpad -golden
+// Warning: Golden root module is already at 'uart_chip_top_allpad'
+// Command: read design -verilog -revised ./netlist/uart_chip_top_allpad_eco.v
+// Parsing file ./netlist/uart_chip_top_allpad_eco.v ...
+// Revised root module is set to 'uart_chip_top_allpad'
+// Warning: (RTL14) Signal has input but it has no output (occurrence:1)
+// Warning: (RTL14.1) Fanout load of the signal is removed (occurrence:16)
+// Warning: (HRC3.16) A wire is declared, but not used in the module (occurrence:59)
+// Note: Read VERILOG design successfully
+// Command: set root module uart_chip_top_allpad -revised
+// Warning: Revised root module is already at 'uart_chip_top_allpad'
+// Command: report design data
+============================================
+Summary           Golden         Revised
+============================================
+Design-modules         2               1
+Library-cells       1086            1501
+============================================
+Primitives      Golden              Revised
+============================================
+INPUT               46                   46
+OUTPUT              36                   36
+--------------------------------------------
+AND                904                  904
+BUF        *        82                  426
+DFF                350                  350
+INV        *       645                  715
+NAND               183                  183
+NOR                277                  277
+OR                 428                  428
+TIE1       *         01
+XNOR                26                   26
+--------------------------------------------
+Total             2895                 3310
+
+// Command: report black box
+// Command: set flatten model -seq_constant -seq_constant_x_to 0
+// Command: set analyze option -auto
+// Command: set system mode lec
+// Processing Golden ...
+// Modeling Golden ...
+// Processing Revised ...
+// Modeling Revised ...
+// Balanced modeling (auto) mapped 700 out of 700 DFF/DLATs
+// (F28) Converted 17 internal output port(s) to inout port(s)
+// Mapping key points ...
+================================================================================
+Mapped points: SYSTEM class
+--------------------------------------------------------------------------------
+Mapped points     PI     PO     DFF       Total
+--------------------------------------------------------------------------------
+Golden            46     36     350       432
+--------------------------------------------------------------------------------
+Revised           46     36     350       432
+================================================================================
+// Running automatic setup...
+// Automatic setup finished.
+// Command: report unmapped points -summary
+There is no unmapped point
+// Command: report unmapped points -notmapped
+There is no unmapped point
+// Command: report unmapped points -unreachable
+There is no unmapped point
+// Command: add compare points -all
+// 386 compared points added to compare list
+// Command: compare
+================================================================================
+Compared points      PO     DFF       Total
+--------------------------------------------------------------------------------
+Equivalent           36     350       386
+================================================================================
+// Command: report verification
+================================================================================
+Verification Report
+--------------------------------------------------------------------------------
+CategoryCount
+--------------------------------------------------------------------------------
+1. Non-standard modeling options used:0
+--------------------------------------------------------------------------------
+2. Incomplete verification:0
+--------------------------------------------------------------------------------
+3. User modification to design:0
+--------------------------------------------------------------------------------
+4. Conformal Constraint Designer clock domain crossing checks recommended:  0
+--------------------------------------------------------------------------------
+5. Design ambiguity:0
+--------------------------------------------------------------------------------
+6. Compare Results:PASS
+================================================================================
+// Command: report statistics
+Mapping and compare statistics
+================================================================================
+Compare Result       Golden            Revised
+--------------------------------------------------------------------------------
+Root module nameuart_chip_to...   uart_chip_to...
+
+Primary inputs46                 46
+   Mapped46                 46
+
+Primary outputs36                 36
+   Mapped36                 36
+      Equivalent                 36
+
+State key points350                350
+   Mapped350                350
+      Equivalent                350
+================================================================================
+// Command: report compare data -class nonequivalent
+0 Non-equivalent point(s) reported
+0 compared point(s) reported
+================================================================================
+Compared points      PO     DFF       Total
+--------------------------------------------------------------------------------
+Equivalent           36     350       386
+================================================================================
+// Command: report compare data -class abort
+0 Abort point(s) reported
+0 compared point(s) reported
+================================================================================
+Compared points      PO     DFF       Total
+--------------------------------------------------------------------------------
+Equivalent           36     350       386
+================================================================================
+// Command: exit -force
