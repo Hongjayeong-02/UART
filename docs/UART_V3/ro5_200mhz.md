@@ -281,3 +281,19 @@ pad-limited라 core 대부분이 비어 있고, 표준셀은 연결된 입력 PA
 회로도(IO CDL)는 IO NMOS bulk를 VSSIOR로 두고, layout은 단일 p-substrate가 VSS · VSSIOR 탭에 함께 닿아 VSS 하나로 묶인다. deck에 기판 분리 규칙이 없어 생기는 불일치로, 회로 결함이 아니라 라이브러리 · deck 한계로 판단한다. IO 두꺼운 산화막 MP/MN 각 2개 차이도 bulk가 달라 병렬 reduction이 달라진 결과로 본다(미확인).
 
 **정리**: 원본 GDS · CDL은 그대로 두고 복사본(라벨 추가, BONDPAD52 제외)으로 원인을 분리했다. LVS 공식 결과는 여전히 **미통과**이며, 남은 원인은 IO 기판 모델링 하나다.
+
+### 7.11 Hold ECO 실습 (2026-11-13)
+
+hold fix(`optDesign -postCTS/-postRoute -hold`)만 끈 별도 run으로 위반을 만들고 교재 11장 흐름으로 고쳤다. 상세: [`UART_V3/4_pnr/eco_hold/`](../../UART_V3/4_pnr/eco_hold).
+
+| | ECO 전 | ECO 후 |
+|---|---|---|
+| hold WNS / 위반 (Tempus) | −0.071 ns / 110 | **+0.001 ns / 0** |
+| setup WNS (Tempus) | +0.287 ns | +0.063 ns |
+| 추가 셀 | — | CLKBUFX2 280 (`FE_ECOC*`) |
+| DRC / 새 connectivity open | — | 0 / 0 (원본 DB 재검사와 같은 8건) |
+
+- 목표 +10 ps → 배선 후 +1 ps: Tempus의 배선 추정과 실제 `ecoRoute`의 차이.
+- 원본 칩(Innovus 자동 hold fix, 50셀, setup 손실 0.064 ns)보다 셀 5.6배 · setup 손실 3.5배. endpoint 단위 ECO는 국소 수정용이다.
+- LEC(합성 ↔ ECO netlist)는 아직 하지 않았다.
+

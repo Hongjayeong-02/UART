@@ -24,7 +24,7 @@
 | 전원 연결 | Innovus verifyConnectivity | info 8 = corner LEF PORT 구조로 인한 도구상 open (GDS 링 연속) | §7.8 · §7.10 |
 | DRC (PVS) | sign-off rule deck | 21,648 → **826** (streamOut map 수정, core 0, 나머지 PAD ring) | §7.6 |
 | LVS (PVS) | sign-off rule deck | **미통과** · core MOS unmatched 0, Pins 86/86 (복사본 실험), 남은 원인 IO 기판 VSS ↔ VSSIOR 46쌍 | §7.7 · §7.10 |
-| ECO | Tempus → Innovus | 예정 (hold fix를 끈 별도 run) | — |
+| ECO (실습) | hold fix를 끈 run → Tempus `add_repeater` → Innovus | hold −0.075 ns · 110 위반 → **+0.001 ns · 0** (CLKBUFX2 280), DRC 0, 새 open 0 · setup +0.063 | [`4_pnr/eco_hold/`](UART_V3/4_pnr/eco_hold) |
 | Power | Innovus | 전체 28.6 mW 중 UART core 0.336 mW (1.2 %) | §7 |
 
 ## Flow · 교재 장 ↔ 위치 (V3 5 ns)
@@ -37,7 +37,7 @@
 | 4 | Floorplan → Route → ChipFinish | Innovus | 2권 2~8장 | [`UART_V3/4_pnr/scripts_5ns_padall_ro_bf/`](UART_V3/4_pnr/scripts_5ns_padall_ro_bf) | 완료 |
 | 5 | Equivalence Check | Conformal | 2권 9장 | [`UART_V3/6_verify/lec/ro5_bf/`](UART_V3/6_verify/lec/ro5_bf) | 완료 |
 | 6 | RC 추출 · Post-STA | Innovus · Tempus | 2권 10장 | §7.9 | 완료 |
-| 7 | ECO | Tempus · Innovus | 2권 11장 | — | 예정 |
+| 7 | ECO | Tempus · Innovus | 2권 11장 | [`UART_V3/4_pnr/eco_hold/`](UART_V3/4_pnr/eco_hold) | 완료 (LEC 예정) |
 | 8 | Post-layout Simulation | Xcelium | 2권 12장 | [`UART_V3/5_gls/ro5/`](UART_V3/5_gls/ro5) | 완료 |
 | 9 | Merge · Stream Out | Virtuoso | 2권 13장 | — | 예정 |
 | + | Sign-off DRC / LVS | PVS | (교재 범위 밖) | §7.6 ~ §7.10 | DRC 826 · LVS 미통과 |
