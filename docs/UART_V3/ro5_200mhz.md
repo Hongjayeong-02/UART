@@ -297,3 +297,16 @@ hold fix(`optDesign -postCTS/-postRoute -hold`)만 끈 별도 run으로 위반�
 - 원본 칩(Innovus 자동 hold fix, 50셀, setup 손실 0.064 ns)보다 셀 5.6배 · setup 손실 3.5배. endpoint 단위 ECO는 국소 수정용이다.
 - LEC(Genus netlist ↔ ECO netlist): **386 / 386 Equivalent, Non-eq 0 · PASS** (`eco_hold/lec/`).
 
+### 7.12 Merge · Stream Out (Virtuoso, 2026-11-14)
+
+교재 13장 흐름으로 Merge. 상세: [`UART_V3/7_merge/`](../../UART_V3/7_merge).
+
+| | 결과 |
+|---|---|
+| design GDS Stream In 경고 | Innovus 자동 map 182,170 → PDK `soce/streamOut.map` **113** (무시된 도형 182,058 → 1, DIEAREA) |
+| 표준셀 · IO Stream In | error 0 · Overwrite로 셀 내부 채워짐, corner IO ring 연속 확인 |
+| SEALRING · Move Origin · LOGO | 1912 × 1920 µm, 원점 (0, 0), `UART_LOGO` 92 × 28 µm |
+| Stream Out | `uart_chip_final.gds` 0 error |
+
+교재는 layer map 불일치를 교육용 PDK의 한계로 두고 넘어가지만, PDK에 Innovus 형식 map이 있어 design GDS를 그 map으로 출력하면 해결된다.
+
