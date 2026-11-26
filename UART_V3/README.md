@@ -1,99 +1,49 @@
-# UART V3 — APB3 UART Peripheral IP
+## 설계 가정값과 선택 이유 (5 ns PAD top RO 기준)
 
-APB3 slave UART IP. 8개 memory-mapped register, TX/RX FIFO(depth 8, parameterized), 7/8-bit data,
-even/odd parity, 1/2 stop bit, RX data / parity·frame error / overflow interrupt(W1C), internal loopback.
+외부 인터페이스 사양·PLL 사양이 없는 교육용 환경이라 아래 값 중 일부는 **가정값**이다. 가정값은 결과 해석의 전제이므로 한계와 함께 적는다.
 
+### Clock · SDC (`3_syn/cons/uart_v3_5ns_pad.sdc`)
 
-## 폴더
+| 항목 | 값 | 이유 | 한계 · 미검증 |
+|---|---|---|---|
+| Clock period | 5 ns (200 MHz) | 10 ns 결과의 합성 slack에서 경로 지연을 역산해 같은 RTL·스크립트로 닫히는 주기를 예측 (I2R 예측 +0.75 ns → 실제 +0.84 ns) | 더 줄이면 I2R(RX FIFO count 갱신, read 캡처)이 먼저 깨짐. reg2reg는 +2.659 ns 여유 |
+| I/O delay max | 주기의 40 % (2 ns) | 입력 40 % + 출력 40 % = 80 %, 칩 내부에 20 % 남김. 60 %면 입력→출력 조합 경로가 clock과 무관하게 불가능 (10 ns 합성 −2,702 ps) | 실제 APB master 사양이 아닌 비율 가정 |
+| I/O delay min | 0 ns | hold에 가장 비관적인 가정 | Tempus hold worst(`i_pwdata[4]` → `.../SI`, +0.010 ns)가 이 가정에서 나옴. 실제 min delay가 정해지면 재확인 |
+| Clock uncertainty | setup 0.10 / hold 0.05 ns | (초안) jitter + CTS 전 skew 예상분. hold는 같은 edge 비교라 jitter 영향이 작아 더 작게 | PLL jitter 사양 없음. CTS 후에도 같은 값을 써서 다소 비관적 |
+| Clock transition | 0.05 ns | (초안) CTS 전 ideal clock의 slew 가정 | CTS 후에는 실제 clock tree 값 사용 |
+| Input transition | 0.5 ns (PAD top) | 블록용 `set_driving_cell BUFX2`를 쓰면 BUFX2가 PADDI PAD 핀(약 2.4 pF)을 구동하는 가정이 돼 transition 29.7 ns, I2R −29.6 ns의 가짜 위반 발생 | 0.5 ns 자체는 가정값. FF corner에서 입력 PAD IOPATH가 음수 → SDF에서 0 처리 → hold 판정은 STA 기준 |
+| Output load | 0.01 pF (10 fF) | (초안) 블록 SDC 값을 그대로 사용 | PAD 출력이 구동하는 보드 부하(보통 수 pF)는 반영하지 않음 |
+| `i_uartRx` / `o_uartTx` | false path | 비동기 직렬. RX는 2-FF synchronizer로 수신, TX는 상대 장치가 비동기로 샘플 | GLS에서 RX synchronizer 첫 단 하나만 timing check 제외 (`5_gls/ro5/sync1.tfile`) |
+| `rst_n` | `set_ideal_network` + false path | reset synchronizer(2단): 비동기 assert, 동기 deassert. 첫 단은 비동기 해제를 전제로 한 회로 | 외부 reset 해제 타이밍은 synchronizer가 보장한다는 전제 |
 
-| 폴더 | 내용 |
-|---|---|
-| `1_rtl/` | **최종 RTL (⑨ = ⑦ + reset synchronizer)**. top: `uart_apb`(peripheral), `uart_chip_top`(RX/TX PAD) |
-| `1_rtl_ro/` | **PADALL RO** `uart_apb.v`: read 응답을 플롭 출력으로 바꾼 버전(read +1 wait, write zero-wait). 나머지 모듈은 `1_rtl/`과 같음. 합성 결과: `3_syn/README_10ns_padall_ro.md` |
-| `1_rtl_pad/` | `uart_chip_top_allpad.v`: 외부 포트 82개 전부 PAD (PADDI 46 · PADDO 36), 10 ns 칩 레벨 P&R용 |
-| `1_rtl_bf/` | **발표 최종(5 ns PAD top RO)용 BAUDDIV 수정** `uart_baud_gen.v` (`==` → `>=`). 나머지는 `1_rtl` + `1_rtl_ro` + `1_rtl_pad`. 상세: [`docs/UART_V3/ro5_200mhz.md`](../docs/UART_V3/ro5_200mhz.md) |
-| `1_rtl_r10e/` | **⑩-E RTL** (1 GHz R2R 구조 최적화 대표안, `uart_apb` 아래 10개 모듈). 상세: [`docs/UART_V3/step10_r2r.md`](../docs/UART_V3/step10_r2r.md) |
-| `patches/` | 원본 → ③ → ④ → ⑦ → ⑨ 단계별 `diff -ruN`, ⑤ 기각안, ⑧ 미채택안 · **⑩: `07` lookahead·shift, `08` RX parity·RX FIFO, `09` core TX 쓰기, `10` ⑩-F baud 분할·tick 복제, `11` ⑨→⑩-E 전체** · `12` BAUDDIV `>=` 수정(발표 최종) |
-| `2_tb/` | `tb_uart_v3_final.v`(regression 33 checks), `tb_uart_v3_final_gl.v`(같은 33 checks, 내부 신호 참조 없음 → gate-level용), `mcp_checker.sv`(MCP 근거 assertion), GLS·PAD TB · **`r10/`**: ⑨↔⑩ lockstep(`tb_lock.v`, ⑩-E 전제 assertion 포함), live/큰 BAUDDIV TB |
-| `3_syn/` | 1 GHz SDC(`cons/`), Genus 스크립트(`script/`), 핵심 리포트(④ `opt4`, ⑦ `pipe7`, ⑧ `rxp8`, ⑨ `rsync9`, 계층 유지 `hier`) · **10 ns**: `uart_v3_10ns.sdc`, `uart_v3_10ns_pad.sdc`, `run_synthesis_10ns_{rsync,pad2,padall}.tcl`, `reports/10ns_*` |
-| `4_pnr/` | Innovus 스크립트 0~5, MMMC(cap table 제거본), P&R SDC, sweep 스크립트, MCP what-if(`scripts/mcp_whatif.tcl`), 리포트(**최종 ⑨ QRC `reports_rsync9_qrc/`**, ⑦ QRC `reports_pipe7_qrc/`, cap table flow: ⑦ `reports_pipe7/`, ⑧ `reports_rxp8/`, ⑨ `reports_rsync9/`) |
-| `4_pnr/` (PADALL RO) | `scripts_padall_ro/`, `reports_10ns_padall_ro/` (최종 칩 레벨 P&R, 2026-11-06 재실행 · hold 목표 +5 ps), `reports_10ns_padall_ro_h20/` (이전 +20 ps 결과), **`init_io/`** (Init → floorplan → IO 배치 → IO filler, `init_io/README.md`, `init_io_1106.md`) |
-| `4_pnr/` (10 ns) | `scripts_10ns/`(V3: 바뀐 파일만 · rst_n false path SDC · hold 목표 +5 ps, 2차는 +20 ps), `scripts_padall/`(PAD top 전체 flow, IO 파일 생성 · modify LEF), **`reports_10ns_v3_h5/` (최종, hold 목표 +5 ps)**, `reports_10ns_v3/` (2차 +20 ps, `run1/` = 1차), `reports_10ns_padall/` (`run1/` = 1차) |
-| `5_gls/` | post-layout GLS용 SDF 설정 (smoke: max / min / recrem split, gate-level regression: `gl_max` / `gl_min`, ⑨ QRC: `glq_max` / `glq_min`, **10 ns 최종: `g10_{max,min}_{100,48}.cmd`**) · `gl10.sh`(10 ns GL 실행 스크립트) |
-| 5 ns 발표 최종 | `tools_ro5/`, `3_syn/cons/uart_v3_5ns_pad.sdc`, `3_syn/reports/5ns_padall_ro_bf/`, `4_pnr/scripts_5ns_padall_ro_bf/`, `4_pnr/reports_5ns_padall_ro_bf/`, `5_gls/ro5/`, `6_verify/lec/ro5_bf/`, `6_verify/ro5_sim/` |
-| ⑩ (1 GHz R2R) | `tools_r10/`(sim·합성·P&R·LEC·GLS 실행 스크립트), `3_syn/reports/r10*/`, `4_pnr/reports_r10*_qrc/`, `5_gls/r10e/`, `6_verify/lec/r10e/`, `6_verify/r10_sim/` |
-| `6_verify/` | `read_opt/`: V3 ↔ RO 같은 APB 시퀀스 비교 TB · regression 결과(`regression/*_pf.txt`), 동등성 비교 TB(`equivalence/`), 면적 합산 `area.awk`, **Conformal LEC**(`lec/`: RTL↔합성 `run_lec*.do`, 합성↔P&R `run_lec_pnr.do`, console 로그) |
+### Corner · RC (`4_pnr/scripts_5ns_padall_ro_bf/uart_chip_top_allpad.mmmc.view`)
 
-## 바로 돌려 보기 (Icarus Verilog)
+| 항목 | 값 | 이유 | 한계 · 미검증 |
+|---|---|---|---|
+| Setup corner | SS · 0.9 V · 125 °C | 가장 느린 조건 | 저전압 미세 공정의 temperature inversion(저온 SS가 더 느림) corner는 보지 않음 |
+| Hold corner | FF · 1.1 V · 0 °C | 가장 빠른 조건 | TT corner 없음 |
+| 합성 corner | SS 하나 | 합성은 setup 최적화가 목적이고 hold는 CTS 후에 수정 | — |
+| RC | QRC tech 파일만 (cap table 제거) | 28 nm용 cap table이 섞여 preRoute 추정이 비관적 → 셀 과다 upsizing. 제거 후 ⑨ R2R WNS −110 → −97 ps, 면적 6,400 → 5,830 µm² | BEST/WORST가 같은 QRC 파일에 온도만 다름. RC 편차(cbest/cworst) corner 없음 |
+| OCV | `onChipVariation` + CPPR | early/late 분리 계산, 공통 clock 구간 비관성 제거 | `set_timing_derate` 미설정(기본 1.0) → OCV margin은 실제로 반영되지 않음 |
 
-```sh
-cd UART_V3
-make regress   # 최종 RTL에 33-check regression → 서버(Xcelium) 결과와 diff
-make gl        # gate-level용 TB를 RTL에 실행 → regress와 diff
-make mcp       # MCP 근거 assertion
-make eq        # ③ vs ④ FIFO·TX 랜덤 비교, 원본 vs ④ FIFO reset 동등성
-```
+### Floorplan · Power · P&R
 
-## 서버 flow (Cadence)
-
-스크립트는 학교 서버의 디렉터리 구조를 기준으로 작성되어 있다. 이 저장소와의 대응:
-
-| 서버 (`~/PROJ1/proj1_make/TOP/`) | 저장소 |
-|---|---|
-| `RTL/UART_V3_rsync/` | `1_rtl/` |
-| `SIM/TESTBENCH/UART_V3/` | `2_tb/` |
-| `SYN/cons`, `SYN/script` | `3_syn/cons`, `3_syn/script` |
-| `PNR_1GHZ_RSYNC_QRC/` (최종 ⑨), `PNR_1GHZ_PIPE_QRC/` (⑦), `PNR_1GHZ_RSYNC/`·`PNR_1GHZ_PIPE/` (cap table flow) | `4_pnr/scripts/` |
-| `SIM/POST_1GHZ/`, `SIM/GL_RSYNC/`, `SIM/GL_10NS/` | `5_gls/` |
-| `PNR_10NS_V3_H5/` (최종), `PNR_10NS_V3/`, `PNR_10NS_PADALL/` | `4_pnr/scripts_10ns/`, `4_pnr/scripts_padall/` |
-| `RTL/UART_V3_padall/` | `1_rtl/` + `1_rtl_pad/` |
-| `RTL/UART_V3_padall_ro/`, `SYN/report_10ns_padall_ro/` | `1_rtl_ro/`, `3_syn/reports/10ns_padall_ro/` |
-| `PNR_10NS_PADALL_RO/`, `PNR_10NS_PADALL_RO_INITIO/` | `4_pnr/scripts_padall_ro/` + `reports_10ns_padall_ro/`, `4_pnr/init_io/` |
-| (수업 서버) `EC_10ns/` | `6_verify/lec/` |
-| `RTL/UART_V3_padall_ro_bf`, `SYN/report_5ns_padall_ro_bf`, `PNR/PNR_5NS_PADALL_RO_BF/`, (수업 서버) `lec_ro5/` | `1_rtl_bf/`, `3_syn/reports/5ns_padall_ro_bf/`, `4_pnr/*_5ns_padall_ro_bf/`, `6_verify/lec/ro5_bf/` |
-| `RTL/UART_V3_r10*`, `SYN/report_1ghz_r10*`, `PNR/PNR_1GHZ_R10*_QRC/`, `SIM/GL_R10E/`, (수업 서버) `lec_r10e/` | `1_rtl_r10e/`, `3_syn/reports/r10*/`, `4_pnr/reports_r10*_qrc/`, `5_gls/r10e/`, `6_verify/lec/r10e/` |
-
-```tcsh
-# regression (Xcelium)
-xrun -64bit -clean -access +r -timescale 1ns/1ps ../TESTBENCH/UART_V3/tb_uart_v3_final.v -y ../../RTL/UART_V3_rsync +libext+.v -l rsync.log
-# synthesis
-genus -files script/run_synthesis_1ghz_rsync.tcl -log syn_rsync
-# P&R
-innovus -nowin -log run_all.log < run_all.tcl >& console.log
-# post-layout GLS (SS SDF)
-xrun -64bit -clean -access +rwc -neg_tchk -sdf_verbose -sdf_cmd_file sdf_max.cmd -top tb_uart_v3_gls \
-     ../TESTBENCH/UART_V3/tb_uart_v3_post_gls.v ../../PNR_1GHZ/outputs/uart_apb_pnr.v <PDK cell verilog> -l gls_max.log
-# gate-level regression — 최종 ⑨ QRC (SS SDF). min은 glq_min.cmd
-xrun -64bit -clean -access +r -neg_tchk -sdf_verbose -sdf_cmd_file glq_max.cmd -define NO_DUMP -top tb_uart_v3_final_gl \
-     ../TESTBENCH/UART_V3/tb_uart_v3_final_gl.v ../../PNR_1GHZ_RSYNC_QRC/outputs/uart_apb_pnr.v <PDK cell verilog> -l glq_max.log
-# (이전 cap table flow 기록: gl_max.cmd / gl_min.cmd + PNR_1GHZ_RSYNC)
-```
-
-MCP what-if는 ChipFinish DB를 연 뒤 `set_interactive_constraint_modes [all_constraint_modes -active]` → `source mcp_whatif.tcl` 순서로 실행한다
-(interactive mode를 지정하지 않으면 SDC 명령이 반영되지 않는다).
-
-## RC 설정 (cap table flow → QRC flow)
-
-처음 MMMC의 RC corner에는 `qrc.tch`와 함께 28 nm용 cap table(`-cap_table ...capTbl`)이 지정돼 있었다(Innovus IMPEXT-6202 경고).
-배선 후 추출은 두 경우 모두 TQuantus + `qrc.tch`였지만, 배치·CTS 단계의 preRoute 추정은 cap table을 썼다.
-`sed -i '/-cap_table/d' uart_apb.mmmc.view`로 두 줄만 지우고 RTL·SDC·util은 그대로 재실행했다(`_QRC` 폴더). 저장소의 `uart_apb.mmmc.view`는 제거본이다.
-
-| R2R TNS (ns) | postCTS 예측 | postRoute 실제 | R2R WNS | area (µm²) |
+| 항목 | 값 | 위치 | 이유 | 한계 · 미검증 |
 |---|---|---|---|---|
-| ⑦ cap table | −13.03 | −3.82 | −77 | 6,676 |
-| ⑨ cap table | −12.74 | −5.15 | −110 | 6,400 |
-| ⑦ QRC | −6.48 | −7.91 | −116 | 6,204 |
-| **⑨ QRC (최종)** | −6.40 | −6.97 | **−97** | **5,830** |
+| Die | 1892 × 1900 µm | `0_InitDesign.tcl` | pad-limited (한 변 PAD 최대 23 × 60 µm + corner 240 × 2). IO filler가 정수 µm라 PAD 간격을 `respace.tcl`로 정수화 | core 높이가 row 정수배가 아님 (IMPFP-7238 경고 2) |
+| Core margin | 칩 30 µm / 블록 15 µm | `0_InitDesign.tcl` | core power ring 채널 (초안: 칩은 PAD → ring sroute 여유를 더 둠) | 30 µm의 정량 근거 없음 |
+| 블록 util | 0.6 | `scripts_10ns/0_InitDesign.tcl` | sweep에서 0.8까지 통과, 0.9는 hold 22 위반. 검증 끝난 기준과 ECO·hold buffer 여유 때문에 유지 | pin 간격 2 µm에서 0.7 이상이면 일부 pin 미배치 (IMPOPT-576) |
+| Core ring | Metal9/8, width 2, spacing 1, offset 1 µm | `1_PowerPlan.tcl` | (초안) 저항이 낮은 최상위 두꺼운 금속 사용 | IR drop 분석으로 확인하지 않음 |
+| Stripe | Metal8 수직, width 1, pitch 30 µm | `1_PowerPlan.tcl` | (초안) core 전력 0.336 mW로 작아 넓은 pitch로 충분하다고 판단 | IR drop · EM 분석 없음 |
+| 전원 PAD | core VDD/VSS 2쌍(좌·우), IO VDDIOR/VSSIOR 2쌍(위·아래) | `uart_padall.io` | 양쪽 공급, IO 전원과 core 전원 분리 | 전류 · EM 계산 없음. corner LEF 구조로 connectivity info 8건, LVS 공식 미통과 |
+| dont_use | CoreSiteDouble 셀 전부 | `2_PlaceOpt.tcl` (placeDesign 전) | floorplan row가 CoreSite만 있어 placement 위반 72건 발생 경험 | Genus 합성 스크립트에는 미적용 |
+| CTS 셀 | `CLKBUF*` / `CLKINV*` | `3_PostCTSopt.tcl` | rise/fall 대칭으로 duty · min pulse width 유지 | — |
+| hold 목표 | `holdTargetSlack 0.005` | `3_PostCTSopt.tcl` | 0 / 5 / 20 ps 비교: +20 ps는 buffer 170개(+8.3 % 면적)로 여유 4 ps. hold margin은 SDC uncertainty 50 ps로 관리 | — |
+| Tie cell | TIEHI/TIELO, maxFanout 8 | `2_PlaceOpt.tcl` | 상수 입력을 gate에 전원 직결하지 않기 위함 (초안: fanout 제한은 배선 길이 제한) | fanout 8의 정량 근거 없음 |
 
-cap table flow는 배선 전 예측이 비관적이라 셀이 과하게 upsizing됐다. run은 조건마다 1회씩이다.
+### 검증
 
-## check_timing (최종 ⑨ QRC, `4_pnr/reports_rsync9_qrc/check_timing.rpt`)
-
-unconstrained endpoint 19개는 모두 의도된 항목이다: `o_prdata[31:16]` 16개 · `o_pslverr`(TIELO 상수 출력), `o_uartTx`(false path), `r_rstSync_reg[0]/D`(상수 1 입력). 그 밖에 `clk` no drive, `i_uartRx` no input delay(false path). 전체 최악 경로는 `i_paddr[2] → o_prdata[6]`(APB 읽기 입력 → 출력 조합 경로, `worst_all.rpt`).
-
-`5_gls/*.cmd`의 `SDF_FILE`은 학교 서버의 절대 경로(`<TOP>/...`)다. 다른 환경에서는 SDF 경로를 바꿔야 한다.
-
-10 ns · PAD · LEC 결과 요약은 저장소 루트 README의 "과제 조건 10 ns" 절.
-
-PDK 라이브러리(.lib/.lef/capTbl), netlist, SDF, GDS, Innovus DB는 라이선스·용량 때문에 포함하지 않는다.
-스크립트·리포트의 PDK 경로와 라이브러리 이름은 `<PDK>`, `stdlib`/`iolib`, `std_ss`/`std_ff`, `io_ss`/`io_ff`, `qrc.tch`로 일반화해 적었다. 서버에서 실행할 때는 실제 경로로 바꿔야 한다.
+| 항목 | 값 | 이유 | 한계 |
+|---|---|---|---|
+| GLS TB clock | 200 MHz / 48 MHz | 200 MHz는 at-speed, 48 MHz는 (초안) V1부터 쓰던 baud 파라미터 기준 clock으로 주파수와 무관한 기능 동일성 확인 | GLS의 hold는 SDF 음수 지연이 0 처리돼 낙관적 → hold는 STA로 판정 |
+| FIFO depth | 8 (parameter) | (직접 작성) | — |
