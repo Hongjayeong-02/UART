@@ -1,6 +1,6 @@
 ########################################
 # UART V3 chip-level MMMC (ALL PAD)
-# Top : uart_chip_top_allpad / Clock : 100 MHz (10 ns)
+# Top : uart_chip_top_allpad / Clock : 200 MHz (5 ns)
 # Lib : <PDK> basicCells + iolib PAD (SS / FF), QRC tech file only (no cap table)
 ########################################
 

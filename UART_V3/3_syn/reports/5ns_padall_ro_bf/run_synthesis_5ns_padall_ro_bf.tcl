@@ -4,7 +4,7 @@
 # Technology : <PDK>
 # Library    : std_ss.lib
 # TOP        : uart_chip_top_allpad
-# Clock      : 100 MHz (Period = 10 ns)
+# Clock      : 200 MHz (Period = 5 ns)
 # ============================================================
 
 # ------------------------------------------------------------
@@ -98,24 +98,24 @@ write_sdc > [file join $NETLIST_DIR uart_chip_top_allpad_syn.sdc]
 puts "========================================"
 puts " UART V3 SYNTHESIS COMPLETED"
 puts " TOP       : uart_chip_top_allpad"
-puts " CLOCK     : 100 MHz (10 ns)"
-puts " PERIOD    : 10 ns"
+puts " CLOCK     : 200 MHz (5 ns)"
+puts " PERIOD    : 5 ns"
 puts " LIBRARY   : std_ss"
 puts "========================================"
 
 
-report_clocks > report_10ns_padall/clocks.rpt
-report_timing -max_paths 20 -nworst 1 > report_10ns_padall/top20_paths.rpt
-report_gates > report_10ns_padall/gates.rpt
-write_db -to_file netlist_10ns_padall/uart_chip_top_allpad_10ns.db
+report_clocks > $REPORT_DIR/clocks.rpt
+report_timing -max_paths 20 -nworst 1 > $REPORT_DIR/top20_paths.rpt
+report_gates > $REPORT_DIR/gates.rpt
+write_db -to_file $NETLIST_DIR/uart_chip_top_allpad_5ns.db
 
-check_timing_intent -verbose > report_10ns_padall/timing_intent.rpt
-report_constraint -all_violators > report_10ns_padall/violators.rpt
-report_timing -from [all_inputs] -max_paths 5 > report_10ns_padall/in2reg.rpt
-report_timing -to [all_outputs] -max_paths 5 > report_10ns_padall/reg2out.rpt
-report_timing -from [get_ports rst_n] -max_paths 5 > report_10ns_padall/reset.rpt
-report_timing -from [all_registers] -to [all_registers] -max_paths 10 > report_10ns_padall/r2r.rpt
-report_timing -from [all_registers] -to [all_outputs] -max_paths 5 > report_10ns_padall/r2o.rpt
+check_timing_intent -verbose > $REPORT_DIR/timing_intent.rpt
+report_constraint -all_violators > $REPORT_DIR/violators.rpt
+report_timing -from [all_inputs] -max_paths 5 > $REPORT_DIR/in2reg.rpt
+report_timing -to [all_outputs] -max_paths 5 > $REPORT_DIR/reg2out.rpt
+report_timing -from [get_ports rst_n] -max_paths 5 > $REPORT_DIR/reset.rpt
+report_timing -from [all_registers] -to [all_registers] -max_paths 10 > $REPORT_DIR/r2r.rpt
+report_timing -from [all_registers] -to [all_outputs] -max_paths 5 > $REPORT_DIR/r2o.rpt
 
 
 exit
