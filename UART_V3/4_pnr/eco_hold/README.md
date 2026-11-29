@@ -63,12 +63,13 @@ SI/SE 핀이 많은 이유: 설계에 scan이 없지만 Genus가 load-enable FF�
 | Hold WNS (Innovus) | −0.075 | +0.001 | +0.012 |
 | Setup WNS (Tempus) | +0.287 | **+0.063** · `i_paddr[7]` → `r_prdata_reg[0]/D` | +0.224 |
 | Setup WNS (Innovus) | +0.290 | +0.072 | +0.226 |
-| `report_constraint -all_violators` | — | 위반 0 | 0 |
+| `report_constraint -all_violators` | — | **max_transition 7 net (14 pin), 최악 −0.572** → §5.1에서 수정 | 0 |
 | coverage setup / hold | — | 887 / 888 (untested 1 = const) | 같음 |
 | real net / RC 주석 | — | 1,553 / 1,471 (94.7 %), 빠진 82개 | 1,323 / 1,241, 빠진 82개 |
 | u_uart_apb 셀 / 면적 | — | 1,361 / 4,356 µm² | 1,104 / 3,941 µm² |
 
 - net 증가 +230 = ECO buffer +280 − 원본의 Innovus hold 셀 50. RC 주석이 빠진 82개(top 포트 ↔ PAD net)는 그대로라 ECO가 만든 검증 공백은 없다.
+- max_transition 위반은 ECO가 새로 만든 것이다(ECO 전 0). 처음 정리할 때 이 항목을 "위반 0"으로 잘못 적었고, 2026-11-29 보고서를 다시 확인하며 바로잡았다.
 - Tempus 목표 +10 ps가 배선 후 +1 ps가 됐다. `add_repeater`가 새 buffer의 배선을 추정으로 계산했기 때문이며, ECO에서 margin을 남기는 이유다. 위반은 아니지만 derate · uncertainty를 더하면 음수가 될 수준이다.
 
 ## 5. 비교: endpoint ECO vs Innovus 자동 hold fix
@@ -81,6 +82,37 @@ SI/SE 핀이 많은 이유: 설계에 scan이 없지만 Genus가 load-enable FF�
 | 통제 | 도구 자동 | 위치 · 셀을 엔지니어가 지정 |
 
 endpoint 단위 처방은 셀 수와 setup 여유 양쪽에서 비싸다. 국소 수정(late ECO, metal-only 등)에 맞는 방식이고, 대량 위반은 P&R 단계 최적화가 효율적이다.
+
+## 5.1 2차 ECO: max_transition 수정 ([`scripts/8_DRV_fix_ECO.tcl`](scripts/8_DRV_fix_ECO.tcl), 2026-11-29)
+
+1차 ECO 후 Innovus DRV: **max_tran 7 net (14 pin), 최악 −0.563 ns** (한도 0.280 ns, FUNC_SS_WORST). 7개 모두 `r_baudDiv_reg[9..15]/SI` 앞에 1개씩 들어간 `CLKBUFX2`다.
+
+| 원인 확인 (`dbGet` 좌표, µm) | y |
+|---|---|
+| `i_pwdata[9..15]` PAD · ECO buffer | 1,448 ~ 1,628 (칩 위쪽) |
+| `r_baudDiv_reg[9..15]` | 484 ~ 497 (칩 아래쪽) |
+
+`add_repeater -term`은 buffer를 driver(PAD) 옆에 두어 buffer 하나가 약 1 mm 배선을 구동했다. 1차 ECO가 hold delay만 맞추고 transition은 보지 않은 결과다.
+
+| 시도 | max_tran | hold WNS | 판단 |
+|---|---|---|---|
+| 1차 ECO 후 | 7 net, −0.563 | +0.001 | — |
+| ① buffer 7개 `CLKBUFX2 → X4` | 7 net, −0.173 | **−0.005** (`baudDiv[10]/SI`) | 셀 크기보다 배선 길이가 원인, hold 악화 |
+| ② buffer↔FF 중간점에 `CLKBUFX4` 추가 (`FE_ECOT1~7`, `-loc`) | 1 net, −0.009 (`FE_ECOT1`) | +0.001 | 배선 분할로 transition · hold 동시 개선 |
+| ③ `FE_ECOT1 → CLKBUFX6` | **0** | **+0.001** | 완료 |
+
+최종 (`ChipFinish_after_ECO4`, Innovus `timeDesign`):
+
+| 항목 | NanoRoute 후 (HOLDOFF) | 1차 ECO 후 | **2차 ECO 후** |
+|---|---|---|---|
+| Setup WNS all / reg2reg | +0.290 / +2.662 | +0.072 / +2.433 | **+0.072 / +2.433** |
+| Hold WNS · 위반 | −0.075 · 110 | +0.001 · 0 | **+0.001 · 0** (`r_rstSync_reg[0]→[1]`) |
+| max_tran / max_cap / fanout / length | 0 | 7 net / 0 / 0 / 0 | **0 / 0 / 0 / 0** |
+| DRC · checkPlace | 0 · 0 | 0 · 0 | **0 · 0** |
+| Connectivity | 8 | 8 | 8 (같은 항목) |
+| top 인스턴스 | 1,221 | 1,501 | 1,508 (+7) |
+
+보고서: `reports/innovus/eco4_*`, `*eco4*.rpt`. 추가 buffer는 top 레벨이라 `u_uart_apb` 셀 수 · 면적(1,361 / 4,356 µm²)은 그대로다.
 
 ## 6. LEC (Conformal, [`lec/`](lec))
 
@@ -99,13 +131,15 @@ buffer는 key point가 아니므로 비교점 수가 ECO 전(386)과 같다. 논
 
 | 항목 | 상태 |
 |---|---|
+| LEC: Genus netlist ↔ ECO4 netlist | 미수행 (§6 PASS는 1차 ECO netlist 기준). buffer 7개만 추가돼 PASS 예상이나 확인 전 |
+| Tempus signoff (§4) 재실행 | 미수행 (§5.1 수치는 Innovus `timeDesign`) |
 | Post-layout GLS (ECO SDF) | 선택 (미수행) |
 
 ## 8. 파일
 
 | 경로 | 내용 |
 |---|---|
-| `scripts/` | Tempus 루프 · Innovus 적용 · ChipFinish |
+| `scripts/` | Tempus 루프 · Innovus 적용 · ChipFinish · 2차 DRV ECO |
 | `reports/innovus.eco` | Tempus가 쓴 ECO (`ecoAddRepeater` 280줄) |
 | `reports/tempus_eco/` | 00 hold 전 · 10 setup 전 · 20 endpoint별 log · 30 hold 후 · 40 setup 후 |
 | `reports/tempus_p2/` | Practice 2: check_timing · parasitics · coverage · setup · hold · violators |
