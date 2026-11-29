@@ -292,10 +292,12 @@ hold fix(`optDesign -postCTS/-postRoute -hold`)만 끈 별도 run으로 위반�
 | setup WNS (Tempus) | +0.287 ns | +0.063 ns |
 | 추가 셀 | — | CLKBUFX2 280 (`FE_ECOC*`) |
 | DRC / 새 connectivity open | — | 0 / 0 (원본 DB 재검사와 같은 8건) |
+| max_transition (Innovus) | 0 | **7 net, −0.563 ns** → 2차 ECO 후 **0** |
 
 - 목표 +10 ps → 배선 후 +1 ps: Tempus의 배선 추정과 실제 `ecoRoute`의 차이.
 - 원본 칩(Innovus 자동 hold fix, 50셀, setup 손실 0.064 ns)보다 셀 5.6배 · setup 손실 3.5배. endpoint 단위 ECO는 국소 수정용이다.
-- LEC(Genus netlist ↔ ECO netlist): **386 / 386 Equivalent, Non-eq 0 · PASS** (`eco_hold/lec/`).
+- 1차 ECO buffer가 PAD 옆에서 약 1 mm 배선을 구동해 max_transition 위반이 생겼다. 2차 ECO(2026-11-29)로 배선 중간점에 `CLKBUFX4` 7개(1개는 X6)를 넣어 0으로 만들었다. 최종 Innovus: setup +0.072 · hold +0.001 · DRV 0 · DRC 0 (`eco_hold/` §5.1).
+- LEC(Genus netlist ↔ 1차 ECO netlist): **386 / 386 Equivalent, Non-eq 0 · PASS** (`eco_hold/lec/`). 2차 ECO netlist LEC는 하지 않았다.
 
 ### 7.12 Merge · Stream Out (Virtuoso, 2026-11-14)
 
